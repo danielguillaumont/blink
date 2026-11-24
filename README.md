@@ -6,7 +6,7 @@
 
 A local-first visual comparison toolkit for detecting and measuring differences between images.
 
-**Development status:** BL03 visual workspace. The scientific engine and local UI are implemented; CLI is planned.
+**Development status:** BL04 developer toolkit. The scientific engine, local UI and command-line tool are implemented.
 
 ## Quick start
 
@@ -56,3 +56,35 @@ python -m streamlit run app.py
 ```
 
 Open the loopback URL printed by Streamlit. Start with the built-in synthetic dashboard or select **Your images**. Compare matching opaque PNG/JPEG files (up to 20 MiB and 4 million pixels each). The workspace offers threshold controls, region filtering, overlays, a slider-controlled split, manual Blink switching, heatmap and side-by-side views. Export PNG evidence and JSON without writing to the repository. Streamlit binds to loopback and usage telemetry is disabled by the included configuration. Run from the repository root to use that configuration.
+
+## Command-line toolkit
+
+Install the core package (no Streamlit required):
+
+```bash
+python -m pip install .
+blink --help
+blink compare before.png after.png --threshold 15
+blink compare before.png after.png --json
+blink compare before.png after.png --fail-above 2 --output-dir evidence
+```
+
+Use `python -m blink_visual` if the installed script is not on your PATH. The CLI
+uses the same scientific engine and image limits as the workspace: opaque,
+equal-sized PNG/JPEG images, up to 20 MiB and 4 million pixels per image. Its
+default threshold is 15 (the Python API defaults to 0). `--min-region-pixels`
+filters regions without changing pixel statistics. `--no-region-bounds` removes
+bounding boxes from the exported overlay. The output directory must not already
+exist; it contains `overlay.png`, `heatmap.png` and `report.json`. Exports are
+written before evaluating the quality gate, including on gate failure. An I/O
+error can leave partial evidence; use a fresh directory on retry.
+
+| Exit code | Meaning |
+| --- | --- |
+| 0 | Comparison completed; optional quality gate passed |
+| 1 | Comparison completed but changed percentage exceeded `--fail-above` |
+| 2 | Invalid arguments, unsupported input or evidence I/O error |
+
+The gate uses the unrounded percentage and fails only when strictly greater
+than the limit. `--json` writes the versioned analysis report to stdout; gate
+messages and errors go to stderr. No network services are needed.

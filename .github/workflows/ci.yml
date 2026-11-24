@@ -27,3 +27,6 @@ jobs:
       - run: python -m pytest -q
       - run: python examples/smoke.py
       - run: python examples/scientific_smoke.py
+      - run: blink --version
+      - run: blink compare outputs/bl02/before.png outputs/bl02/after.png --fail-above 2 --output-dir outputs/bl04
+      - run: python -m blink_visual compare outputs/bl02/before.png outputs/bl02/after.png --json
