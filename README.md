@@ -4,87 +4,106 @@
 
 # Blink
 
-A local-first visual comparison toolkit for detecting and measuring differences between images.
+**See what changed.** A local-first visual comparison toolkit for developers, designers and QA engineers. Compare two images, locate changes, measure structural similarity and export reproducible evidence — through a visual workspace, CLI or Python API.
 
-**Development status:** BL04 developer toolkit. The scientific engine, local UI and command-line tool are implemented.
+[![CI](https://github.com/danielguillaumont/blink/actions/workflows/ci.yml/badge.svg)](https://github.com/danielguillaumont/blink/actions/workflows/ci.yml) [![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB)](https://www.python.org/) [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
+![Blink workspace showing original and modified synthetic dashboards, metrics and comparison controls](assets/screenshots/workspace.png)
+
+## What Blink does
+
+- Measure thresholded pixel differences with vectorized NumPy operations.
+- Calculate structural similarity (SSIM) and locate connected change regions.
+- Inspect differences through overlays, split, manual Blink, heatmap and side-by-side views.
+- Export native-resolution PNG evidence and versioned JSON reports.
+- Enforce visual regression limits in CI with predictable exit codes.
+
+![Original, modified, difference overlay and heatmap from Blink's scientific engine](assets/demo.gif)
+
+*Engine-rendered demonstration using a synthetic dashboard. No personal data.*
 
 ## Quick start
 
-Requires Python 3.11 or newer (3.12 recommended).
+Python 3.11+ (3.12 recommended). From a terminal with Python available:
 
 ```bash
-python -m pip install -e ".[dev]"
-python -m pytest -q
-python examples/smoke.py
+git clone https://github.com/danielguillaumont/blink.git
+cd blink
+python -m venv .venv
 ```
 
-The smoke test generates two synthetic PNGs under `outputs/bl01/` and verifies exactly 200 changed pixels out of 16,000 (1.25%).
+Activate the environment: `.\.venv\Scripts\Activate.ps1` on Windows PowerShell or `source .venv/bin/activate` on macOS/Linux. Alternatively, invoke the virtual environment's Python executable directly.
 
-## Python API
+### Visual workspace
 
-```python
-from blink_visual import compare
-
-result = compare("before.png", "after.png", threshold=15)
-print(result.changed_pixels, result.changed_percentage)
+```bash
+python -m pip install ".[ui]"
+python -m streamlit run app.py
 ```
 
-The threshold is an integer from 0 to 255. A pixel is counted if its largest absolute RGB channel difference exceeds the threshold. Files must have equal decoded dimensions. The current loader supports single-frame opaque 8-bit RGB or grayscale PNG/JPEG images, honors EXIF orientation and does not perform color-profile conversion. Other modes and transparency are rejected rather than silently discarded. Images are processed locally; the API makes no network requests.
+Open the loopback URL printed by Streamlit. Explore the built-in demo or upload two equal-sized images. Adjust the threshold and region filter, inspect changes and export evidence. Run from the repository root so the bundled loopback-only and telemetry settings are applied.
 
-See [development plan](docs/roadmap.md) for the deliberately small release scope. MIT licensed.
+![Difference overlay, evidence export controls and collapsible regions panel](assets/screenshots/evidence.png)
 
-## Scientific comparison
+### Command line
+
+```bash
+python -m pip install .
+python examples/scientific_smoke.py
+blink compare outputs/bl02/before.png outputs/bl02/after.png --fail-above 2
+blink compare outputs/bl02/before.png outputs/bl02/after.png --output-dir evidence
+blink compare outputs/bl02/before.png outputs/bl02/after.png --json
+```
+
+The smoke fixture contains exactly 300 changed pixels out of 16,000 (1.875%). The first comparison passes the 2% quality gate; a 1% gate would fail. The output directory must not exist. Blink writes `overlay.png`, `heatmap.png` and `report.json` before evaluating the gate. If an I/O error leaves partial evidence, retry in a new directory.
+
+| Exit code | Meaning |
+| --- | --- |
+| `0` | Comparison succeeded; optional quality gate passed |
+| `1` | Comparison succeeded; changed percentage exceeded the limit |
+| `2` | Invalid arguments, unsupported input or evidence I/O error |
+
+The quality gate uses the unrounded percentage and fails only when strictly greater than the limit. With `--json`, reports go to stdout and errors or gate messages to stderr. Use `python -m blink_visual` if the `blink` executable is not on your PATH. Run `blink compare --help` for all options.
+
+### Python API
 
 ```python
 from blink_visual import analyze, difference_overlay, heatmap, load_rgb
 
-result = analyze("before.png", "after.png", threshold=15, min_region_pixels=4)
+result = analyze("before.png", "after.png", threshold=15)
+print(result.pixels.changed_percentage, result.ssim)
 print(result.to_dict())
 difference_overlay(load_rgb("after.png"), result).save("overlay.png")
 heatmap(result).save("heatmap.png")
 ```
 
-Run `python examples/scientific_smoke.py` to generate verified sample images, an overlay, heatmap and JSON report under `outputs/bl02/`.
+The core package has no Streamlit dependency. A wheel from GitHub Releases can also be installed with `python -m pip install <wheel-file>` for CLI and library use; the visual workspace requires the source checkout and UI extra.
 
-SSIM uses decoded RGB values, a fixed data range of 255 and an odd window up to 7 pixels. It is independent of the threshold and is `None` for images smaller than 3 pixels on either axis. Changed regions use eight-neighbor connectivity; the largest 100 qualifying regions are reported, with pixel coordinates and exact changed-pixel counts. Region filtering does not alter the overall changed-pixel count. Heatmaps encode absolute max-channel magnitude on a fixed 0–255 scale, independent of threshold. No automatic alignment, resizing, transparency compositing or color-profile conversion is performed.
+## How it works
 
-## Local visual workspace
+| Component | Responsibility |
+| --- | --- |
+| NumPy | Widened integer subtraction, max-channel magnitude and boolean masks |
+| SciPy | Eight-connected component detection and region geometry |
+| scikit-image | Structural similarity across decoded RGB channels |
+| Pillow | Image decoding, orientation, overlays and PNG rendering |
+| Streamlit | Optional interactive local workspace |
+| argparse | CLI and automation integration |
+
+All three interfaces share the numerical engine. A pixel is changed when its maximum absolute RGB-channel difference is strictly greater than the threshold (0–255). CLI and workspace default to 15; the Python API defaults to 0. Region filtering changes the qualifying region count, not the changed-pixel percentage; the largest 100 qualifying regions are reported. SSIM uses a fixed data range of 255 and an odd window up to 7 pixels, and is unavailable if either dimension is below 3. SSIM and the fixed-scale heatmap are independent of the threshold.
+
+### Input and privacy boundaries
+
+Blink supports equal-sized, single-frame, opaque 8-bit RGB or grayscale PNG/JPEG images and honors EXIF orientation. It does not silently resize, align, composite transparency or convert color profiles. CLI and workspace inputs are capped at 20 MiB and 4 million pixels per image; those application limits do not apply to direct Python API calls. Images are processed locally; the core comparison engine makes no network requests. Workspace preview scaling never changes the analyzed or exported images.
+
+## Development
 
 ```bash
 python -m pip install -e ".[dev,ui]"
-python -m streamlit run app.py
+python -m pytest -q
+python examples/smoke.py
+python examples/scientific_smoke.py
+python examples/generate_demo.py
 ```
 
-Open the loopback URL printed by Streamlit. Start with the built-in synthetic dashboard or select **Your images**. Compare matching opaque PNG/JPEG files (up to 20 MiB and 4 million pixels each). The workspace offers threshold controls, region filtering, overlays, a slider-controlled split, manual Blink switching, heatmap and side-by-side views. Export PNG evidence and JSON without writing to the repository. Streamlit binds to loopback and usage telemetry is disabled by the included configuration. Run from the repository root to use that configuration.
-
-## Command-line toolkit
-
-Install the core package (no Streamlit required):
-
-```bash
-python -m pip install .
-blink --help
-blink compare before.png after.png --threshold 15
-blink compare before.png after.png --json
-blink compare before.png after.png --fail-above 2 --output-dir evidence
-```
-
-Use `python -m blink_visual` if the installed script is not on your PATH. The CLI
-uses the same scientific engine and image limits as the workspace: opaque,
-equal-sized PNG/JPEG images, up to 20 MiB and 4 million pixels per image. Its
-default threshold is 15 (the Python API defaults to 0). `--min-region-pixels`
-filters regions without changing pixel statistics. `--no-region-bounds` removes
-bounding boxes from the exported overlay. The output directory must not already
-exist; it contains `overlay.png`, `heatmap.png` and `report.json`. Exports are
-written before evaluating the quality gate, including on gate failure. An I/O
-error can leave partial evidence; use a fresh directory on retry.
-
-| Exit code | Meaning |
-| --- | --- |
-| 0 | Comparison completed; optional quality gate passed |
-| 1 | Comparison completed but changed percentage exceeded `--fail-above` |
-| 2 | Invalid arguments, unsupported input or evidence I/O error |
-
-The gate uses the unrounded percentage and fails only when strictly greater
-than the limit. `--json` writes the versioned analysis report to stdout; gate
-messages and errors go to stderr. No network services are needed.
+CI runs the tests and smoke comparisons on Windows and Linux with Python 3.12. The optional UI extra is required for Streamlit tests. See [development checkpoints](docs/roadmap.md) for scope and [MIT license](LICENSE) for usage terms.

@@ -83,3 +83,18 @@ def demo_pair() -> tuple[np.ndarray, np.ndarray]:
         text(748, 468, 'Published' if modified else 'Draft', 18)
         return np.array(im, dtype=np.uint8)
     return make(False), make(True)
+
+
+def preview_image(image: Image.Image | np.ndarray) -> Image.Image:
+    """Enlarge tiny inputs by integer nearest-neighbor steps for inspection only.
+
+    Evidence exports and scientific measurements retain native dimensions.
+    Never enlarge past 640 px on either axis, or enlarge by more than 4x.
+    """
+    if isinstance(image, np.ndarray):
+        image = Image.fromarray(image)
+    largest = max(image.size)
+    factor = min(4, 640 // largest) if largest <= 320 else 1
+    if factor <= 1:
+        return image
+    return image.resize((image.width * factor, image.height * factor), Image.Resampling.NEAREST)
