@@ -14,6 +14,7 @@ dependencies = ["numpy>=1.26,<3", "Pillow>=10.3", "scipy>=1.11,<2", "scikit-imag
 
 [project.optional-dependencies]
 dev = ["pytest>=8,<10"]
+ui = ["streamlit>=1.67,<2"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
