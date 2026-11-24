@@ -12,6 +12,9 @@ license = "MIT"
 license-files = ["LICENSE"]
 dependencies = ["numpy>=1.26,<3", "Pillow>=10.3", "scipy>=1.11,<2", "scikit-image>=0.22,<1"]
 
+[project.scripts]
+blink = "blink_visual.cli:main"
+
 [project.optional-dependencies]
 dev = ["pytest>=8,<10"]
 ui = ["streamlit>=1.67,<2"]
