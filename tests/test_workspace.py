@@ -6,7 +6,7 @@ import pytest
 from PIL import Image
 
 from blink_visual import analyze_pixels
-from blink_visual.workspace import demo_pair, decode_upload, png_bytes, report_bytes, split_image
+from blink_visual.workspace import demo_pair, decode_upload, png_bytes, report_bytes, split_image, preview_image
 
 
 def test_demo_is_deterministic():
@@ -59,3 +59,19 @@ def test_report_matches_engine():
     a, b = demo_pair()
     result = analyze_pixels(a, b, threshold=15)
     assert json.loads(report_bytes(result)) == result.to_dict()
+
+
+def test_preview_preserves_pixel_blocks():
+    image = np.zeros((100, 160, 3), dtype=np.uint8)
+    image[15, 60] = (255, 82, 123)
+    preview = np.asarray(preview_image(image))
+    assert preview.shape == (400, 640, 3)
+    assert np.all(preview[60:64, 240:244] == (255, 82, 123))
+    assert np.count_nonzero(preview[:, :, 0]) == 16
+    assert np.count_nonzero(image[:, :, 0]) == 1
+    assert Image.open(BytesIO(png_bytes(image))).size == (160, 100)
+
+
+def test_preview_does_not_enlarge_normal_images():
+    image = Image.new('RGB', (960, 540))
+    assert preview_image(image) is image
