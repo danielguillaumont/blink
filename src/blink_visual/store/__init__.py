@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from collections import Counter
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -12,6 +13,7 @@ from ..errors import StoreError
 from ..serde import dumps, from_dict
 from .blobs import BlobStore, sha256_hex
 from .db import Database
+from .ledger import Ledger
 
 if TYPE_CHECKING:
     from ..scan import ScanReport
@@ -38,6 +40,7 @@ class Store:
             ) from None
         self.blobs = BlobStore(root / "objects")
         self.db = Database(root / DB_FILENAME)
+        self.ledger = Ledger(self.db, root)
 
     def close(self) -> None:
         self.db.close()
@@ -127,14 +130,20 @@ class Store:
     def set_baseline(
         self, target: str, profile: str, snapshot_id: str, *, reason: str = ""
     ) -> None:
+        at = utc_now()
         with self.db.transaction() as conn:
             conn.execute(
                 "INSERT INTO baselines (target, profile, snapshot_id, set_at, reason) "
                 "VALUES (?, ?, ?, ?, ?) ON CONFLICT(target, profile) DO UPDATE SET "
                 "snapshot_id = excluded.snapshot_id, set_at = excluded.set_at, "
                 "reason = excluded.reason",
-                (target, profile, snapshot_id, utc_now(), reason),
+                (target, profile, snapshot_id, at, reason),
             )
+        self.ledger.append(
+            "baseline.set",
+            {"target": target, "profile": profile, "snapshot": snapshot_id, "reason": reason},
+            at=at,
+        )
 
     def baseline_id(self, target: str, profile: str) -> str | None:
         row = self.db.query_one(
@@ -147,8 +156,8 @@ class Store:
         return [dict(row) for row in rows]
 
     # -- runs and findings -------------------------------------------------------
-    def record_scan(self, report: ScanReport) -> str:
-        """Persist a scan report (as a blob) and index its results and findings."""
+    def record_scan(self, report: ScanReport, *, kind: str = "scan") -> str:
+        """Persist a report (as a blob), index its results and findings, and ledger it."""
         digest = self.put_blob(report.to_json().encode("utf-8"), "application/vnd.blink.scan+json")
         max_severity = report.max_severity
         status = (
@@ -159,9 +168,10 @@ class Store:
         with self.db.transaction() as conn:
             conn.execute(
                 "INSERT INTO runs (id, kind, started_at, finished_at, status, max_severity, "
-                "report_sha256) VALUES (?, 'scan', ?, ?, ?, ?, ?)",
+                "report_sha256) VALUES (?, ?, ?, ?, ?, ?, ?)",
                 (
                     report.run_id,
+                    kind,
                     report.started_at,
                     report.finished_at,
                     status,
@@ -203,6 +213,24 @@ class Store:
                     for f in report.findings
                 ],
             )
+        counts = Counter(f.severity.label for f in report.findings)
+        self.ledger.append(
+            f"run.{kind}",
+            {
+                "run_id": report.run_id,
+                "started_at": report.started_at,
+                "finished_at": report.finished_at,
+                "status": status,
+                "report_sha256": digest,
+                "max_severity": None if max_severity is None else max_severity.label,
+                "findings": dict(sorted(counts.items())),
+                "results": [
+                    {"target": r.target, "profile": r.profile, "status": r.status}
+                    for r in report.results
+                ],
+            },
+            at=report.finished_at,
+        )
         return digest
 
     def run_report(self, run_id: str) -> dict[str, object]:
