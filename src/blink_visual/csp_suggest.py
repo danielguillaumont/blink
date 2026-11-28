@@ -90,7 +90,7 @@ def suggest_csp(inventory: Inventory, baseline: Snapshot) -> CspSuggestion:
             and origin not in connect
         ):
             connect.append(origin)
-    directives = {"script-src": script_src or ["'none'"], "connect-src": connect}
+    directives = {"script-src": _ordered(script_src) or ["'none'"], "connect-src": connect}
     directives.update({k: list(v) for k, v in HARDENING.items()})
     return CspSuggestion(directives=directives, sri_tags=sri_tags, notes=notes)
 
@@ -98,3 +98,14 @@ def suggest_csp(inventory: Inventory, baseline: Snapshot) -> CspSuggestion:
 def _approved(inventory: Inventory, script: ScriptRecord) -> bool:
     entry = inventory.match(script)
     return bool(entry and entry.approved)
+
+
+def _ordered(sources: list[str]) -> list[str]:
+    """Deterministic order: keywords such as 'self' first, then origins, then hashes."""
+
+    def rank(source: str) -> tuple[int, str]:
+        if source.startswith("'sha"):
+            return (2, source)
+        return (0, source) if source.startswith("'") else (1, source)
+
+    return sorted(set(sources), key=rank)

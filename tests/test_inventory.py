@@ -237,7 +237,7 @@ def test_suggest_csp_uses_only_approved_entries():
     suggestion = suggest_csp(inventory, base)
     script_src = suggestion.directives["script-src"]
     assert script_src[:2] == ["'self'", "http://127.0.0.1:9101"]
-    assert f"'{inline.sha384}'" in script_src
+    assert script_src[-1] == f"'{inline.sha384}'"
     assert "http://127.0.0.1:9999" not in script_src
     assert suggestion.directives["connect-src"] == ["'self'", "http://127.0.0.1:9102"]
     assert suggestion.directives["object-src"] == ["'none'"]
