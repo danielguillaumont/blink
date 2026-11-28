@@ -15,7 +15,13 @@ from string import Template
 from typing import Any
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, Response
+from fastapi.responses import (
+    HTMLResponse,
+    JSONResponse,
+    PlainTextResponse,
+    RedirectResponse,
+    Response,
+)
 
 from .fixtures import INLINE_CONFIG, asset, sri
 from .scenarios import DEFAULT_SCENARIO, SCENARIOS
@@ -55,6 +61,8 @@ class LabState:
     scenario: str = DEFAULT_SCENARIO
     leaked_auth: list[str] = field(default_factory=list)
     """Auth headers that reached the CDN or sink (they must only ever go to the shop)."""
+    carts: dict[str, dict[str, bool]] = field(default_factory=dict)
+    """Multi-step shop sessions: cart id -> progress flags. Never any customer data."""
     _lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
 
     def set_scenario(self, name: str) -> None:
@@ -130,6 +138,37 @@ def render_checkout(state: LabState, scenario: str) -> str:
     )
 
 
+CART_COOKIE = "lab_cart"
+PRODUCT = """<section class="summary" id="product">
+<h2>Lab notebook</h2><p>A5, dotted, 120 pages. EUR 30.00</p>
+<form action="/shop/cart/add" method="post"><button id="add-to-cart" type="submit">Add to cart</button></form>
+</section>"""
+CART = """<section class="summary" id="cart">
+<h2>Your cart</h2>
+<div id="cart-items"><div class="line"><span>Lab notebook</span><span>EUR 30.00</span></div></div>
+<a id="go-to-details" class="button" href="/shop/details">Checkout</a>
+</section>"""
+CART_EMPTY = """<section class="summary" id="cart">
+<h2>Your cart</h2><p id="cart-empty">Your cart is empty.</p><a href="/shop">Continue shopping</a>
+</section>"""
+DETAILS = """<section class="summary" id="details">
+<h2>Guest details</h2>
+<form id="details-form" action="/shop/details" method="post">
+<label>E-mail<input id="email" name="email" type="email" autocomplete="email"></label>
+<label>Full name<input id="full-name" name="name" autocomplete="name"></label>
+<label>Postcode<input id="postcode" name="postcode" autocomplete="postal-code"></label>
+<label>Country<select id="country" name="country"><option value="NL">Netherlands</option>
+<option value="GB">United Kingdom</option><option value="DE">Germany</option></select></label>
+<label><input id="terms" type="checkbox" name="terms"> I accept the lab terms</label>
+<button id="continue-to-payment" type="submit">Continue to payment</button>
+</form>
+</section>"""
+
+
+def render_shop_page(title: str, content: str) -> str:
+    return Template(asset("shop_page.html")).substitute(title=title, content=content)
+
+
 def _js(content: str, *, cors: bool = False) -> Response:
     headers = {"X-Content-Type-Options": "nosniff", "Cache-Control": "no-store"}
     if cors:
@@ -180,6 +219,61 @@ def build_shop(state: LabState) -> FastAPI:
         # Cookie values rotate; Blink records only names and flags, never values.
         response.set_cookie("lab_session", secrets.token_hex(12), httponly=True, samesite="lax")
         return response
+
+    # -- multi-step flow: product -> cart -> guest details -> payment ----------------------------
+    def cart_of(request: Request) -> dict[str, bool] | None:
+        return state.carts.get(request.cookies.get(CART_COOKIE, ""))
+
+    def page(title: str, content: str) -> HTMLResponse:
+        headers = dict(_security_headers(state, "clean"))
+        return HTMLResponse(render_shop_page(title, content), headers=headers)
+
+    @app.get("/shop")
+    def shop() -> HTMLResponse:
+        return page("Product", PRODUCT)
+
+    @app.post("/shop/cart/add")
+    def cart_add(request: Request) -> Response:
+        cart_id = request.cookies.get(CART_COOKIE, "")
+        if cart_id not in state.carts:
+            cart_id = secrets.token_hex(12)
+        with state._lock:
+            state.carts[cart_id] = {"items": True, "details": False}
+        response = RedirectResponse("/shop/cart", status_code=303)
+        response.set_cookie(CART_COOKIE, cart_id, httponly=True, samesite="lax")
+        return response
+
+    @app.get("/shop/cart")
+    def cart(request: Request) -> HTMLResponse:
+        current = cart_of(request)
+        return page("Cart", CART if current and current["items"] else CART_EMPTY)
+
+    @app.get("/shop/details")
+    def details(request: Request) -> Response:
+        current = cart_of(request)
+        if not current or not current["items"]:
+            return RedirectResponse("/shop/cart?empty=1", status_code=303)
+        return page("Details", DETAILS)
+
+    @app.post("/shop/details")
+    def details_done(request: Request) -> Response:
+        # The body is never read: the lab only records that this step happened.
+        current = cart_of(request)
+        if not current or not current["items"]:
+            return RedirectResponse("/shop/cart?empty=1", status_code=303)
+        with state._lock:
+            current["details"] = True
+        return RedirectResponse("/shop/checkout", status_code=303)
+
+    @app.get("/shop/checkout")
+    def shop_checkout(request: Request) -> Response:
+        """The payment page, reachable only with a cart and guest details (like a real store)."""
+        current = cart_of(request)
+        if not current or not current["items"]:
+            return RedirectResponse("/shop/cart?empty=1", status_code=302)
+        if not current["details"]:
+            return RedirectResponse("/shop/details", status_code=302)
+        return checkout()
 
     @app.get("/staging/checkout")
     def staging_checkout(request: Request) -> Response:
