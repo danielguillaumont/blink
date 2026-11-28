@@ -29,11 +29,13 @@ blink suggest-csp lab-checkout   # minimal CSP + SRI from the approved inventory
 blink daemon --metrics-port 9464 # scheduled scans, missed-run detection, alert sinks
 blink alerts ack ALERT_ID --by alice
 blink verify-ledger              # tamper-evident, ed25519-signed run history
+blink serve                      # dashboard + API on http://127.0.0.1:8765 (docs at /docs)
 ```
 
 Detectors, rules and the findings JSON schema are documented in [`docs/detectors.md`](docs/detectors.md);
 the inventory, approvals and static JS risk score in [`docs/inventory.md`](docs/inventory.md);
-the daemon, alerts, sinks, ledger and metrics in [`docs/operations.md`](docs/operations.md).
+the daemon, alerts, sinks, ledger and metrics in [`docs/operations.md`](docs/operations.md);
+the dashboard, API and its security model in [`docs/dashboard.md`](docs/dashboard.md).
 
 `blink compare` keeps its 1.0 behaviour, pinned by a byte-for-byte golden test.
 
