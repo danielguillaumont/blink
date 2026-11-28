@@ -425,6 +425,17 @@ rules:
       The scheduled scan could not load the payment page even after retries. Until it succeeds,
       changes on the page are not being evaluated.
 
+  # --- journeys -----------------------------------------------------------------------
+  - id: journey.step-failed
+    detector: journey
+    change_type: step_failed
+    severity: high
+    why: >-
+      The synthetic journey could not reach the payment page, so this run did not evaluate it
+      (PCI DSS 11.6.1). Usually a selector or the checkout flow changed; an unexpected redirect
+      or a new interstitial on the way to payment can also be a sign of tampering. Check the
+      screenshot of where the journey broke.
+
   # --- Blink itself -----------------------------------------------------------------
   - id: blink.detector-failed
     detector: blink

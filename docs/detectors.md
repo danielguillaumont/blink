@@ -24,6 +24,7 @@ explanation. `--fail-on SEVERITY` (default `high`) sets the exit-code gate.
 | `visual` | `region_changed` | The Blink 1.0 engine (`analyze_pixels`) on the masked payment-region screenshots, with the `visual:` threshold and minimum region size from `blink.yaml`. Evidence includes the 1.0 overlay and heatmap. Different sizes are compared on their overlap and flagged `resized`. |
 | `tls` | `issuer_changed`, `certificate_changed`, `untrusted`, `expiring`, `tls_error` | HTTPS targets only. Expiry warns under 14 days. |
 
+| `journey` | `step_failed` | A [journey](journeys.md) step failed, so the payment page wasn't reached or evaluated (high). The evidence names the step and URL and includes a screenshot of where it broke. The run exits 3, like any failed capture. |
 | `inventory` | `unapproved`, `hash_mismatch` | Policy check against `blink.inventory.yaml` on every scan (see [inventory.md](inventory.md)). New, added and changed scripts also get a static `risk_score` (0–100). |
 
 A detector that crashes produces a `blink.detector_failed` finding instead of hiding changes.

@@ -183,6 +183,42 @@ class RegionCapture:
 
 
 @dataclass(frozen=True)
+class JourneyStepRecord:
+    """One executed journey step. ``description`` holds templates, never resolved values."""
+
+    index: int
+    action: str
+    description: str
+    status: str
+    """``ok``, ``failed`` or ``skipped``."""
+    duration_ms: int = 0
+    url: str | None = None
+    error: str | None = None
+
+
+@dataclass(frozen=True)
+class JourneyState:
+    """A page state marked with a ``capture`` step."""
+
+    name: str
+    url: str
+    screenshot: str | None = None
+    dom_hash: str | None = None
+    scripts: int = 0
+    primary: bool = False
+    """The state whose DOM, forms and screenshot are the snapshot's own."""
+
+
+@dataclass(frozen=True)
+class JourneyRecord:
+    steps: tuple[JourneyStepRecord, ...] = ()
+    states: tuple[JourneyState, ...] = ()
+    test_mode: bool = False
+    blocked_submissions: int = 0
+    """Payment form submissions Blink blocked because the target is not in test_mode."""
+
+
+@dataclass(frozen=True)
 class Snapshot:
     """Manifest of one capture. Large artifacts are referenced by blob digest."""
 
@@ -211,3 +247,4 @@ class Snapshot:
     warnings: tuple[str, ...] = ()
     schema_version: int = SNAPSHOT_SCHEMA_VERSION
     meta: dict[str, str] = field(default_factory=dict)
+    journey: JourneyRecord | None = None

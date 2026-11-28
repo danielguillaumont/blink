@@ -16,6 +16,7 @@ import yaml
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
 
 from .errors import ConfigError
+from .journey.model import JourneyStep, validate_journey
 
 CONFIG_FILENAME = "blink.yaml"
 NAME_PATTERN = r"^[a-z0-9][a-z0-9_-]{0,62}$"
@@ -306,11 +307,26 @@ class TargetConfig(_Model):
     """Overrides ``BLINK_PROXY`` for this target."""
     auth: AuthConfig | None = None
     """Credentials for a protected (e.g. staging) target, read from environment variables."""
+    journey: list[JourneyStep] = Field(default_factory=list, max_length=100)
+    """Steps that reach the payment page from ``url`` (cart, guest details...)."""
+    test_data: dict[Annotated[str, Field(pattern=r"^[A-Za-z0-9_]{1,64}$")], str] = Field(
+        default_factory=dict
+    )
+    """Named values for journey steps, e.g. ``{email: "{{faker.email}}"}``."""
+    test_mode: bool = False
+    """Set only for a store with a test payment gateway: allows a final ``submit`` step."""
 
     @field_validator("url")
     @classmethod
     def _http_url(cls, value: str) -> str:
         return validate_url(value)
+
+    @model_validator(mode="after")
+    def _journey(self) -> TargetConfig:
+        validate_journey(
+            self.journey, test_mode=self.test_mode, test_data=self.test_data, target=self.name
+        )
+        return self
 
 
 class BlinkConfig(_Model):

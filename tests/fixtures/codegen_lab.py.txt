@@ -1,0 +1,28 @@
+import re
+from playwright.sync_api import Playwright, sync_playwright, expect
+
+
+def run(playwright: Playwright) -> None:
+    browser = playwright.chromium.launch(headless=False)
+    context = browser.new_context()
+    page = context.new_page()
+    page.goto("http://127.0.0.1:8780/shop")
+    page.get_by_role("button", name="Add to cart").click()
+    page.get_by_role("link", name="Checkout").click()
+    page.get_by_label("E-mail").fill("someone@real.example")
+    page.locator("#full-name").fill("Jane Doe")
+    page.locator("#country").select_option("GB")
+    page.get_by_label("I accept the lab terms").check()
+    page.get_by_role("button", name="Continue to payment").click()
+    page.frame_locator("iframe[name=card]").locator("#number").fill("4242 4242 4242 4242")
+    page.get_by_placeholder("12/34").press("Tab")
+    page.locator(".pay-button").click()
+    expect(page.locator("#x")).to_be_visible()
+
+    # ---------------------
+    context.close()
+    browser.close()
+
+
+with sync_playwright() as playwright:
+    run(playwright)

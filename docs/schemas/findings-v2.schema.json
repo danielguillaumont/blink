@@ -72,7 +72,7 @@
         "fingerprint": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
         "target": {"type": "string", "minLength": 1},
         "profile": {"type": "string", "minLength": 1},
-        "detector": {"enum": ["scripts", "network", "headers", "forms", "dom", "visual", "tls", "inventory", "schedule", "blink"]},
+        "detector": {"enum": ["scripts", "network", "headers", "forms", "dom", "visual", "tls", "inventory", "journey", "schedule", "blink"]},
         "change_type": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
         "severity": {"$ref": "#/$defs/severity"},
         "title": {"type": "string", "minLength": 1},

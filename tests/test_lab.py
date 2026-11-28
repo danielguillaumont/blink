@@ -153,3 +153,47 @@ def test_lab_html_uses_only_published_test_card_numbers(shop, state):
         html = checkout(shop, state, name).text
         for digits in re.findall(r"\b(?:\d[ -]?){13,19}\b", html):
             assert re.sub(r"\D", "", digits) == "4242424242424242"
+
+
+def test_shop_flow_needs_cart_and_details(shop, state):
+    empty = shop.get("/shop/checkout", follow_redirects=False)
+    assert (empty.status_code, empty.headers["location"]) == (302, "/shop/cart?empty=1")
+    assert "Your cart is empty" in shop.get("/shop/cart").text
+    assert shop.get("/shop/details", follow_redirects=False).status_code == 303
+    added = shop.post("/shop/cart/add", follow_redirects=False)
+    assert added.status_code == 303 and "lab_cart" in added.cookies
+    assert 'id="cart-items"' in shop.get("/shop/cart").text
+    assert shop.get("/shop/checkout", follow_redirects=False).headers["location"] == "/shop/details"
+    # The details step is recorded without reading the body; then payment is reachable.
+    done = shop.post("/shop/details", data={"email": "x@example.com"}, follow_redirects=False)
+    assert done.headers["location"] == "/shop/checkout"
+    payment = shop.get("/shop/checkout")
+    assert payment.status_code == 200 and 'id="checkout-form"' in payment.text
+    assert all(set(flags) == {"items", "details"} for flags in state.carts.values())
+
+
+def test_shop_pages_have_no_scripts(shop):
+    for path in ("/shop", "/shop/cart"):
+        assert "<script" not in shop.get(path).text
+
+
+def test_staging_checkout_requires_auth(shop):
+    import base64
+
+    assert shop.get("/staging/checkout").status_code == 401
+    basic = base64.b64encode(b"lab:lab-staging-pass").decode()
+    assert (
+        shop.get("/staging/checkout", headers={"Authorization": f"Basic {basic}"}).status_code
+        == 200
+    )
+    assert (
+        shop.get("/staging/checkout", headers={"X-Lab-Token": "lab-staging-token"}).status_code
+        == 200
+    )
+    assert shop.get("/staging/checkout", headers={"X-Lab-Token": "wrong"}).status_code == 401
+
+
+def test_cdn_and_sink_record_leaked_auth_header_names(state):
+    cdn = TestClient(build_cdn(state))
+    cdn.get("/lib/widget.js", headers={"X-Lab-Token": "secret-value"})
+    assert state.leaked_auth == [f"{state.cdn_origin}/lib/widget.js x-lab-token"]

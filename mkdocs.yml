@@ -47,6 +47,9 @@ nav:
   - Getting started:
       - Install and first scan: getting-started.md
       - Configuration: configuration.md
+      - Journeys (cart and checkout steps): journeys.md
+      - "Recipe: WooCommerce": recipes/woocommerce.md
+      - "Recipe: Magento": recipes/magento.md
       - The lab: lab.md
   - Using Blink:
       - Detectors: detectors.md
@@ -73,3 +76,4 @@ nav:
           - 0003 Stdlib sinks and store-derived metrics: adr/0003-stdlib-sinks-and-store-derived-metrics.md
           - 0004 Container topology: adr/0004-container-topology.md
           - 0005 Distribution name blink-checkout: adr/0005-distribution-name-blink-checkout.md
+          - 0006 Journeys and capture states: adr/0006-journeys-and-capture-states.md

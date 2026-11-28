@@ -12,9 +12,27 @@ blink lab --list
 
 | Port | Role |
 |---|---|
-| P | Shop: `/checkout`, first-party `/static/app.js`, `/api/config`, `/__admin/scenario` |
+| P | Shop: `/checkout`, the multi-step flow under `/shop` (below), `/staging/checkout` (auth), first-party `/static/app.js`, `/api/config`, `/__admin/scenario` |
 | P+1 | Simulated third-party CDN: `/lib/widget.js` (loaded with SRI), `/lib/analytics.js` |
 | P+2 | Localhost sink: `/collect` (beacons), `/frame`, `/pay` |
+
+## Multi-step checkout (`/shop`)
+
+Real payment pages usually need a cart and a session. The lab's `/shop` flow behaves the
+same way, so journeys can be tested against it:
+
+| Page | Behaviour |
+|---|---|
+| `/shop` | A product with `#add-to-cart` (a form posting to `/shop/cart/add`, which sets the `lab_cart` session cookie) |
+| `/shop/cart` | The cart (`#cart-items`, `#go-to-details`), or "Your cart is empty" |
+| `/shop/details` | Guest details: e-mail, name, postcode, country, terms, `#continue-to-payment` |
+| `/shop/checkout` | The payment page (with every scenario applied). It redirects to `/shop/cart?empty=1` without a cart, and to `/shop/details` without guest details |
+
+The lab never reads what a journey types: the details step only records *that* it happened.
+`blink_visual.lab.lab_journey_target(origin)` returns a ready target whose journey runs the
+whole flow ([journeys](journeys.md)). `/staging/checkout` serves the same checkout behind
+basic auth (`lab` / `lab-staging-pass`) or the header `X-Lab-Token: lab-staging-token`, so
+the per-target `auth:` setting can be tested.
 
 ## Scenarios
 
