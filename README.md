@@ -108,8 +108,9 @@ flowchart LR
 ## Install
 
 ```bash
-python -m pip install "blink-visual[capture,server] @ git+https://github.com/danielguillaumont/blink@v2.0.0"
-python -m playwright install chromium                  # add --with-deps on Linux
+pipx install "blink-checkout[capture,server]"
+blink doctor                                           # prints the exact fix for anything missing
+#   e.g. ".../blink-checkout/bin/python" -m playwright install chromium
 
 blink init --url https://staging.example.com/checkout  # blink.yaml, ledger key, dashboard token
 blink baseline                                         # record the known-good page
@@ -120,6 +121,11 @@ blink daemon --metrics-port 9464                       # scheduled scans and ale
 blink serve                                            # dashboard on http://127.0.0.1:8765
 blink report                                           # signed audit evidence
 ```
+
+The PyPI distribution is `blink-checkout`; the command is `blink`. Until the first PyPI
+upload, install a release wheel instead:
+`pipx install "blink-checkout[capture,server] @ git+https://github.com/danielguillaumont/blink@v2.1.0"`.
+Full documentation: <https://danielguillaumont.github.io/blink/>.
 
 Or run the container image (`ghcr.io/danielguillaumont/blink:2`, non-root, read-only root
 filesystem, state in `/data`):
@@ -172,6 +178,9 @@ example.
 
 ## Documentation
 
+The docs are published at <https://danielguillaumont.github.io/blink/>, with a sample signed
+report generated from the lab on every build.
+
 | Topic | Doc |
 |---|---|
 | Configuration (`blink.yaml`) | [docs/configuration.md](docs/configuration.md) |
@@ -185,6 +194,7 @@ example.
 | Threat model | [docs/threat-model.md](docs/threat-model.md) |
 | Runbooks: [an alert fired](docs/runbooks/alert-fired.md) · [rebaselining](docs/runbooks/rebaselining.md) · [capture failures](docs/runbooks/troubleshooting-capture.md) | docs/runbooks/ |
 | Design decisions | [docs/adr/](docs/adr/) |
+| Releasing, PyPI Trusted Publishing | [docs/releasing.md](docs/releasing.md) |
 
 ## Safety
 

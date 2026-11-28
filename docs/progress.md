@@ -1,6 +1,35 @@
-# Blink 2.0 progress
+# Blink progress
 
-Status of each phase in [`BUILD_PLAN.md`](../BUILD_PLAN.md). One branch and one PR per phase.
+Status of each phase in [`BUILD_PLAN.md`](https://github.com/danielguillaumont/blink/blob/main/BUILD_PLAN.md)
+(v2.0, Phases 0–7) and
+[`BUILD_PLAN_2X.md`](https://github.com/danielguillaumont/blink/blob/main/BUILD_PLAN_2X.md)
+(v2.x, Phases 13–21). One branch and one PR per phase.
+
+## ACTION NEEDED
+
+These steps need the maintainer's own accounts. Nothing else is blocked on them.
+
+### 1. PyPI and TestPyPI Trusted Publishing (Phase 13)
+
+The workflow `.github/workflows/pypi.yml` is ready. Until the steps below are done, its publish
+jobs are **skipped** (gated by repository variables), so release tags stay green and nothing is
+uploaded. Full detail is in [releasing.md](releasing.md).
+
+1. **TestPyPI.** At <https://test.pypi.org> (a separate account from PyPI, with 2FA on), go to
+   *Your account → Publishing → Add a new pending publisher → GitHub* and enter: project
+   `blink-checkout`, owner `danielguillaumont`, repository `blink`, workflow `pypi.yml`,
+   environment `testpypi`.
+2. **GitHub.** Go to *Settings → Environments → New environment* and create `testpypi`. Then,
+   under *Settings → Secrets and variables → Actions → Variables*, add the repository variable
+   `TESTPYPI_PUBLISH` = `true`.
+3. **Dry run.** Run `gh workflow run pypi.yml -f tag=<latest tag>`. The jobs *Publish to TestPyPI*
+   and *Clean install from TestPyPI* must be green. This completes the Phase 13 criterion "the
+   TestPyPI install works in a clean CI venv", which is currently skipped.
+4. **PyPI.** At <https://pypi.org>, add the same pending publisher with environment `pypi`.
+   Create the GitHub environment `pypi`, preferably with yourself as a required reviewer. Add
+   the variable `PYPI_PUBLISH` = `true`.
+5. **First upload.** The next pushed version tag publishes to PyPI. PyPI versions can't be
+   overwritten, so the upload happens only on a tag push, never on a manual re-run.
 
 ## Phase 0: Reset and hygiene
 
@@ -120,3 +149,40 @@ Status of each phase in [`BUILD_PLAN.md`](../BUILD_PLAN.md). One branch and one 
 - **Known gaps:** not published to PyPI (install from the GitHub release or tag). The
   compose demo's dashboard requires a login because it binds 0.0.0.0 inside the container.
   Proxy settings are global, not per target.
+
+## Phase 13: Distribution and docs
+
+- **Date:** 2026-11-28
+- **PR:** #14
+- **Delivered:**
+  - **CLAUDE.md:** the safety amendment from BUILD_PLAN_2X §4 is applied.
+  - **Distribution:** renamed to **`blink-checkout`** (ADR 0005). The name is in one constant,
+    `blink_visual._meta.DIST_NAME`. The import package and the `blink` command are unchanged,
+    and the 1.0 compare golden tests still pass.
+  - **PyPI:** Trusted Publishing workflow `pypi.yml`. It builds, runs a dry run (clean `pipx`
+    install of the wheel with `[capture,server]`, `blink doctor`), then publishes to TestPyPI
+    and PyPI, gated by repository variables. CI gained a `package` job that runs
+    `twine check --strict` and the clean `pipx` install on every PR. `docs/releasing.md` has
+    the exact pypi.org steps.
+  - **`blink doctor`:** checks Python, the extras, Chromium, the config, the store (writable,
+    SQLite integrity, schema), the ledger key (presence, POSIX mode), ledger verification, the
+    API token and missing baselines. Each problem comes with a fix, and the Chromium fix names
+    the exact interpreter, so it works under pipx. It has `--json` and `--no-browser`, and
+    exits 1 only on a failure. There is one test per check.
+  - **Docs site:** mkdocs-material, built `--strict` with zero warnings on every PR
+    (`docs.yml`). Pushes to `main` deploy to GitHub Pages with a freshly generated sample
+    signed report (`scripts/sample_report.py`, lab only) and the published findings schema.
+    New pages: home, getting started, findings schema, sample report, releasing.
+  - **Known gaps fixed:** Swagger UI 5.17.14 is vendored (SRI-checked, with a test that it
+    renders offline with no external request). Per-target `proxy`, per-profile `proxy`, and
+    `auth` (basic auth or a header token) read secrets from environment variables. Auth is sent
+    only to the target's origin, which a lab e2e test checks, and secrets are scrubbed from the
+    HAR.
+- **Skipped:**
+  - "The TestPyPI install works in a clean CI venv" needs the TestPyPI pending publisher (see
+    ACTION NEEDED §1). The job exists and is skipped until `TESTPYPI_PUBLISH` is set. The same
+    install is proven from the built wheel in the CI `package` job.
+- **Known gaps:**
+  - `blink doctor` checks the key mode on POSIX only.
+  - `mkdocs-material` prints an end-of-life notice (May 2027) that isn't a build warning.
+    Moving to Zensical is a later decision.
