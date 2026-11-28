@@ -43,6 +43,11 @@ def add_parser(subparsers: Any, common: argparse.ArgumentParser) -> None:
     )
     _targets_argument(baseline)
     baseline.add_argument("--reason", default="", help="why this baseline was (re)recorded")
+    baseline.add_argument(
+        "--if-missing",
+        action="store_true",
+        help="only record target/profiles that have no baseline yet (idempotent, for CI)",
+    )
     baseline.set_defaults(handler=run_baseline)
 
     scan = subparsers.add_parser(
@@ -86,23 +91,36 @@ def _check_profiles(project: Project, profiles: list[str] | None) -> None:
 
 def run_baseline(args: argparse.Namespace) -> int:
     from ..capture.browser import Capturer
-    from ..scan import establish_baseline
+    from ..scan import establish_baseline, target_profiles
 
     project = Project.load(args.config)
     targets = select_targets(project, args.targets)
     _check_profiles(project, args.profiles)
-    with project.open_store() as store, Capturer() as capturer:
+    with project.open_store() as store:
+        plan: list[tuple[Any, list[str]]] = []
         for target in targets:
-            for snap in establish_baseline(
-                project, store, target, capturer, profiles=args.profiles, reason=args.reason
-            ):
-                print(f"Baseline {snap.target} [{snap.profile}] = snapshot {snap.id}")
-                print(
-                    f"  {len(snap.scripts)} scripts, {len(snap.forms)} forms, "
-                    f"{len(snap.iframes)} iframes, {len(snap.requests)} requests"
-                )
-                for warning in snap.warnings:
-                    print(f"  warning: {warning}")
+            profiles = target_profiles(target, args.profiles)
+            if args.if_missing:
+                kept = [p for p in profiles if store.baseline_id(target.name, p) is not None]
+                for name in kept:
+                    print(f"Baseline {target.name} [{name}] exists; kept (--if-missing)")
+                profiles = [p for p in profiles if p not in kept]
+            if profiles:
+                plan.append((target, profiles))
+        if not plan:
+            return 0
+        with Capturer() as capturer:
+            for target, profiles in plan:
+                for snap in establish_baseline(
+                    project, store, target, capturer, profiles=profiles, reason=args.reason
+                ):
+                    print(f"Baseline {snap.target} [{snap.profile}] = snapshot {snap.id}")
+                    print(
+                        f"  {len(snap.scripts)} scripts, {len(snap.forms)} forms, "
+                        f"{len(snap.iframes)} iframes, {len(snap.requests)} requests"
+                    )
+                    for warning in snap.warnings:
+                        print(f"  warning: {warning}")
     return 0
 
 

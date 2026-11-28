@@ -116,6 +116,11 @@ class ScanReport:
         return json.dumps(self.to_dict(), indent=2, allow_nan=False) + "\n"
 
 
+def target_profiles(target: TargetConfig, profiles: Sequence[str] | None) -> list[str]:
+    """The target's profiles, limited to ``profiles`` when given."""
+    return _profiles(target, profiles)
+
+
 def _profiles(target: TargetConfig, profiles: Sequence[str] | None) -> list[str]:
     return [p for p in target.profiles if p in profiles] if profiles else list(target.profiles)
 
