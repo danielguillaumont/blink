@@ -12,6 +12,7 @@ import threading
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from string import Template
+from typing import Any
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, Response
@@ -34,6 +35,12 @@ OVERLAY = (
     '<input name="card_cvc" autocomplete="cc-csc" placeholder="123">'
     '<button type="button">Continue</button></form></div>'
 )
+# Lab-only credentials for /staging/checkout (not secrets: they protect nothing real).
+LAB_BASIC_USER = "lab"
+LAB_BASIC_PASSWORD = "lab-staging-pass"  # nosec B105
+LAB_TOKEN_HEADER = "X-Lab-Token"
+LAB_TOKEN = "lab-staging-token"  # nosec B105
+AUTH_HEADERS = ("authorization", LAB_TOKEN_HEADER.lower())
 # A transparent 1x1 GIF.
 PIXEL = base64.b64decode("R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7")
 
@@ -46,6 +53,8 @@ class LabState:
     cdn_origin: str
     sink_origin: str
     scenario: str = DEFAULT_SCENARIO
+    leaked_auth: list[str] = field(default_factory=list)
+    """Auth headers that reached the CDN or sink (they must only ever go to the shop)."""
     _lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
 
     def set_scenario(self, name: str) -> None:
@@ -132,6 +141,27 @@ def _bare_app(title: str) -> FastAPI:
     return FastAPI(title=title, docs_url=None, redoc_url=None, openapi_url=None)
 
 
+def _watch_for_auth(app: FastAPI, state: LabState, origin: str) -> None:
+    """Record (by header name only) any auth header sent to a third-party lab origin."""
+
+    @app.middleware("http")
+    async def watch(request: Request, call_next: Any) -> Response:
+        for name in AUTH_HEADERS:
+            if name in request.headers:
+                state.leaked_auth.append(f"{origin}{request.url.path} {name}")
+        response: Response = await call_next(request)
+        return response
+
+
+def _authorized(request: Request) -> bool:
+    expected = "Basic " + base64.b64encode(
+        f"{LAB_BASIC_USER}:{LAB_BASIC_PASSWORD}".encode()
+    ).decode("ascii")
+    return secrets.compare_digest(
+        request.headers.get("authorization", ""), expected
+    ) or secrets.compare_digest(request.headers.get(LAB_TOKEN_HEADER, ""), LAB_TOKEN)
+
+
 def build_shop(state: LabState) -> FastAPI:
     app = _bare_app("Blink lab shop")
 
@@ -150,6 +180,17 @@ def build_shop(state: LabState) -> FastAPI:
         # Cookie values rotate; Blink records only names and flags, never values.
         response.set_cookie("lab_session", secrets.token_hex(12), httponly=True, samesite="lax")
         return response
+
+    @app.get("/staging/checkout")
+    def staging_checkout(request: Request) -> Response:
+        """The same checkout behind basic auth or a header token (``auth:`` in blink.yaml)."""
+        if not _authorized(request):
+            return PlainTextResponse(
+                "authentication required",
+                status_code=401,
+                headers={"WWW-Authenticate": 'Basic realm="blink-lab"'},
+            )
+        return checkout()
 
     @app.get("/static/app.js")
     def app_js() -> Response:
@@ -199,6 +240,7 @@ def build_shop(state: LabState) -> FastAPI:
 
 def build_cdn(state: LabState) -> FastAPI:
     app = _bare_app("Blink lab CDN")
+    _watch_for_auth(app, state, state.cdn_origin)
 
     @app.get("/lib/widget.js")
     def widget() -> Response:
@@ -213,6 +255,7 @@ def build_cdn(state: LabState) -> FastAPI:
 
 def build_sink(state: LabState) -> FastAPI:
     app = _bare_app("Blink lab sink")
+    _watch_for_auth(app, state, state.sink_origin)
     cors = {"Access-Control-Allow-Origin": "*"}
 
     @app.post("/collect")

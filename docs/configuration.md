@@ -58,6 +58,40 @@ per-target `schedule:` override).
 
 Capturing with more than one profile helps expose skimmers that cloak by user agent.
 
+## Proxies and protected targets
+
+Staging checkouts often sit behind basic auth or a bypass header, and some hosts can only reach
+the internet through a proxy. Secrets are **never** written in `blink.yaml`: each one names an
+environment variable that Blink reads at capture time. A missing variable is a configuration
+error (exit 2) that names it.
+
+```yaml
+targets:
+  - name: staging-checkout
+    url: https://staging.shop.example/checkout
+    proxy:                          # overrides BLINK_PROXY for this target
+      server: http://proxy.internal:3128   # http, https or socks5; no credentials in the URL
+      bypass: "localhost,.corp.example"
+      username_env: PROXY_USER      # optional, both or neither
+      password_env: PROXY_PASS
+    auth:                           # one of:
+      type: basic                   #   HTTP basic auth
+      username_env: STAGING_USER
+      password_env: STAGING_PASS
+    # auth:
+    #   type: header                #   a header token, e.g. a WAF or staging bypass token
+    #   header: X-Staging-Token     #   default Authorization
+    #   value_env: STAGING_TOKEN
+    #   prefix: "Bearer "           #   optional, prepended to the value
+```
+
+- Auth is sent **only to the target's own origin** (scheme, host and port). Third-party script
+  hosts never receive it; the lab test `tests/test_access.py` checks this on every run.
+- The auth header name and every resolved secret value are redacted from the stored HAR, so
+  they never reach snapshots, reports or evidence bundles.
+- A profile may also set `proxy:` (for example a regional egress); a profile proxy wins over the
+  target's, which wins over `BLINK_PROXY`.
+
 ## Determinism
 
 Every capture uses a fresh browser context with the profile's viewport, user agent, locale and

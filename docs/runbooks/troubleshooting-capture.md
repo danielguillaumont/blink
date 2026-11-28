@@ -47,6 +47,10 @@ export BLINK_PROXY_PASSWORD=...                                 # from your secr
 Credentials in the URL itself are rejected, so that they never end up in logs. A TLS-inspecting
 proxy also needs its CA trusted (§4).
 
+`BLINK_PROXY` applies to every target. To use a different proxy for one target (or one
+profile), set `proxy:` on it in `blink.yaml`; see
+[configuration.md](../configuration.md#proxies-and-protected-targets).
+
 ## 4. TLS errors
 
 Blink has no "ignore certificate errors" switch, on purpose: a monitor that accepts any

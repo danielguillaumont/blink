@@ -28,6 +28,7 @@ from urllib.parse import urlsplit
 
 from ..config import ProfileConfig, TargetConfig
 from ..errors import CaptureError, MissingExtraError
+from .access import install_header, resolve_access
 from .har import SENSITIVE_HEADERS, scrub_har_bytes
 from .models import (
     Box,
@@ -343,6 +344,7 @@ class Capturer:
         deadline = _Deadline(target.timeout_s)
         warnings: list[str] = []
         recorder = _Recorder()
+        access = resolve_access(target, profile_proxy=profile.proxy)
         with tempfile.TemporaryDirectory(prefix="blink-har-") as tmp:
             har_path = Path(tmp) / "network.har"
             context = self.browser.new_context(
@@ -358,8 +360,10 @@ class Capturer:
                 service_workers="block",
                 record_har_path=str(har_path),
                 record_har_content="omit",
+                **access.context_options,
             )
             try:
+                install_header(context, access)
                 page = context.new_page()
                 page.set_default_timeout(deadline.remaining_ms())
                 cdp = context.new_cdp_session(page)
@@ -401,7 +405,15 @@ class Capturer:
                 ) from None
             finally:
                 context.close()
-            har = scrub_har_bytes(har_path.read_bytes()) if har_path.exists() else b"{}"
+            har = (
+                scrub_har_bytes(
+                    har_path.read_bytes(),
+                    names=access.secret_headers,
+                    values=access.secret_values,
+                )
+                if har_path.exists()
+                else b"{}"
+            )
         blobs = dict(snapshot.blobs)
         blobs["har"] = store.put_blob(har, "application/json")
         tls = None
