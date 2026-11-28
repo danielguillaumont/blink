@@ -1,0 +1,369 @@
+# Blink default severity rules. First match wins; project rules run before these.
+# Each (detector, change_type) ends with a catch-all so every change gets a severity.
+version: 1
+rules:
+  # --- scripts --------------------------------------------------------------------
+  - id: scripts.added.third-party
+    detector: scripts
+    change_type: added
+    when: {cross_origin: true}
+    severity: high
+    why: >-
+      A new third-party script runs on the payment page. Any script on the page can read what
+      customers type into the card form; PCI DSS 6.4.3 requires every payment page script to
+      be authorized, justified and integrity-checked.
+  - id: scripts.added.first-party
+    detector: scripts
+    change_type: added
+    severity: medium
+    why: >-
+      A new first-party script runs on the payment page. Magecart groups often inject code
+      through compromised first-party bundles; confirm the script came from a reviewed deploy
+      and add it to the inventory.
+  - id: scripts.inline-added
+    detector: scripts
+    change_type: inline_added
+    severity: high
+    why: >-
+      A new inline script appeared. Injected inline code is a classic e-skimming technique
+      because it needs no new network request and bypasses URL-based allowlists.
+  - id: scripts.hash-changed
+    detector: scripts
+    change_type: hash_changed
+    severity: high
+    why: >-
+      The content of an existing script changed at the same URL. Supply-chain attacks swap
+      script content without changing the URL; verify the change against a known release.
+  - id: scripts.sri-mismatch
+    detector: scripts
+    change_type: sri_mismatch
+    severity: critical
+    why: >-
+      The script served does not match its Subresource Integrity hash. Browsers block it, but
+      the source was modified: treat it as a compromise of the script host until proven
+      otherwise.
+  - id: scripts.sri-missing.new
+    detector: scripts
+    change_type: sri_missing
+    when: {new: true}
+    severity: medium
+    why: >-
+      A newly added cross-origin script has no integrity attribute, so a compromised host
+      could change it silently. Add an SRI hash or justify why the script is dynamic.
+  - id: scripts.sri-missing
+    detector: scripts
+    change_type: sri_missing
+    severity: low
+    why: >-
+      A cross-origin script has no Subresource Integrity attribute (pre-existing).
+  - id: scripts.removed
+    detector: scripts
+    change_type: removed
+    severity: info
+    why: A script that was in the baseline is no longer present.
+
+  # --- network --------------------------------------------------------------------
+  - id: network.new-destination.websocket
+    detector: network
+    change_type: new_destination
+    when: {websocket: true}
+    severity: high
+    why: >-
+      The page opened a WebSocket to an origin never seen in the baseline. WebSockets are used
+      by skimmers to stream captured data.
+  - id: network.new-destination.sends-data
+    detector: network
+    change_type: new_destination
+    when: {sends_data: true}
+    severity: high
+    why: >-
+      The page sent data (POST or beacon) to an origin never seen in the baseline. This is how
+      skimmed card data leaves the browser.
+  - id: network.new-destination
+    detector: network
+    change_type: new_destination
+    severity: medium
+    why: >-
+      The page contacted an origin never seen in the baseline. New destinations often
+      accompany injected scripts and iframes.
+  - id: network.destination-removed
+    detector: network
+    change_type: destination_removed
+    severity: info
+    why: An origin contacted in the baseline was not contacted in this scan.
+
+  # --- headers --------------------------------------------------------------------
+  - id: headers.csp-removed
+    detector: headers
+    change_type: csp_removed
+    severity: high
+    why: >-
+      The Content-Security-Policy header was removed, so the browser no longer restricts
+      which scripts may run. Attackers weaken CSP before injecting a skimmer.
+  - id: headers.csp-weakened
+    detector: headers
+    change_type: csp_weakened
+    severity: high
+    why: >-
+      The script policy was weakened (unsafe-inline, unsafe-eval, wildcard sources or no
+      script policy). This re-enables the injection techniques CSP is meant to block.
+  - id: headers.csp-changed.script-directive-removed
+    detector: headers
+    change_type: csp_changed
+    when: {script_directive_removed: true}
+    severity: high
+    why: The script-src/default-src directive was removed from the Content-Security-Policy.
+  - id: headers.csp-changed.script-sources-added
+    detector: headers
+    change_type: csp_changed
+    when: {script_sources_added: {gte: 1}}
+    severity: medium
+    why: >-
+      New script sources were allowed by the Content-Security-Policy. Each allowed origin can
+      serve code to the payment page; confirm the change was intended.
+  - id: headers.csp-changed
+    detector: headers
+    change_type: csp_changed
+    severity: low
+    why: Content-Security-Policy directives changed in a way that does not widen script sources.
+  - id: headers.csp-weakness
+    detector: headers
+    change_type: csp_weakness
+    severity: low
+    why: The Content-Security-Policy has a weakness that already existed in the baseline.
+  - id: headers.csp-missing
+    detector: headers
+    change_type: csp_missing
+    severity: low
+    why: >-
+      The payment page sends no Content-Security-Policy. A CSP with an explicit script-src is
+      the main browser-side control against script injection (pre-existing).
+  - id: headers.removed.framing-covered
+    detector: headers
+    change_type: header_removed
+    when: {header: x-frame-options, covered_by_csp: true}
+    severity: low
+    why: X-Frame-Options was removed, but CSP frame-ancestors still prevents framing.
+  - id: headers.removed.important
+    detector: headers
+    change_type: header_removed
+    when: {header: {in: [strict-transport-security, x-frame-options]}}
+    severity: medium
+    why: >-
+      A transport or anti-framing security header was removed, exposing the payment page to
+      downgrade or clickjacking attacks.
+  - id: headers.removed
+    detector: headers
+    change_type: header_removed
+    severity: low
+    why: A security header present in the baseline was removed.
+  - id: headers.changed.weakened
+    detector: headers
+    change_type: header_changed
+    when: {weakened: true}
+    severity: medium
+    why: A security header was changed to a weaker setting.
+  - id: headers.changed
+    detector: headers
+    change_type: header_changed
+    severity: info
+    why: A security header value changed without an obvious weakening.
+  - id: headers.added
+    detector: headers
+    change_type: header_added
+    severity: info
+    why: A security header was added.
+  - id: headers.missing.important
+    detector: headers
+    change_type: header_missing
+    when: {header: {in: [strict-transport-security, x-frame-options]}}
+    severity: low
+    why: A recommended transport or anti-framing header is not set (pre-existing).
+  - id: headers.missing
+    detector: headers
+    change_type: header_missing
+    severity: info
+    why: A recommended security header is not set (pre-existing).
+
+  # --- forms and iframes ----------------------------------------------------------
+  - id: forms.action-changed.cross-origin
+    detector: forms
+    change_type: action_changed
+    when: {cross_origin: true}
+    severity: critical
+    why: >-
+      The form now submits to a different origin. Redirecting the form action is a direct way
+      to steal card data on submission.
+  - id: forms.action-changed
+    detector: forms
+    change_type: action_changed
+    severity: high
+    why: The form submission target moved to a different origin.
+  - id: forms.action-path-changed
+    detector: forms
+    change_type: action_path_changed
+    severity: medium
+    why: The form action path changed on the same origin.
+  - id: forms.method-changed
+    detector: forms
+    change_type: method_changed
+    severity: medium
+    why: The form submission method changed.
+  - id: forms.form-added.card-overlay
+    detector: forms
+    change_type: form_added
+    when: {card_like: true, overlaps_payment_region: true}
+    severity: critical
+    why: >-
+      A new form with card fields is drawn over the payment area. This is the overlay
+      technique: a fake card form captures data before or instead of the real one.
+  - id: forms.form-added.card
+    detector: forms
+    change_type: form_added
+    when: {card_like: true}
+    severity: high
+    why: A new form collecting card-like fields appeared on the payment page.
+  - id: forms.form-added
+    detector: forms
+    change_type: form_added
+    severity: medium
+    why: A new form appeared on the payment page.
+  - id: forms.form-removed
+    detector: forms
+    change_type: form_removed
+    severity: medium
+    why: A form present in the baseline is gone; confirm the checkout still works as designed.
+  - id: forms.input-added.card
+    detector: forms
+    change_type: input_added
+    when: {card_like: true}
+    severity: high
+    why: A new card-like field was added to an existing form.
+  - id: forms.input-added.hidden
+    detector: forms
+    change_type: input_added
+    when: {hidden: true}
+    severity: medium
+    why: A new hidden field was added to an existing form.
+  - id: forms.input-added
+    detector: forms
+    change_type: input_added
+    severity: low
+    why: A new field was added to an existing form.
+  - id: forms.iframe-added.overlay
+    detector: forms
+    change_type: iframe_added
+    when: {overlaps_payment_region: true, cross_origin: true}
+    severity: critical
+    why: A new cross-origin iframe is drawn over the payment area (possible overlay attack).
+  - id: forms.iframe-added.hidden
+    detector: forms
+    change_type: iframe_added
+    when: {hidden: true}
+    severity: high
+    why: >-
+      A new hidden or off-screen iframe was added. Hidden frames are used to load skimming
+      code or exfiltrate data out of sight.
+  - id: forms.iframe-added.cross-origin
+    detector: forms
+    change_type: iframe_added
+    when: {cross_origin: true}
+    severity: medium
+    why: A new cross-origin iframe was added to the payment page.
+  - id: forms.iframe-added
+    detector: forms
+    change_type: iframe_added
+    severity: low
+    why: A new same-origin iframe was added to the payment page.
+  - id: forms.iframe-removed
+    detector: forms
+    change_type: iframe_removed
+    severity: info
+    why: An iframe present in the baseline is gone.
+
+  # --- dom ------------------------------------------------------------------------
+  - id: dom.region-missing
+    detector: dom
+    change_type: region_missing
+    severity: high
+    why: The configured payment region no longer exists, so the page structure changed radically.
+  - id: dom.region-changed.sensitive
+    detector: dom
+    change_type: region_changed
+    when: {sensitive_added: {gte: 1}}
+    severity: high
+    why: >-
+      Scripts, forms, inputs or frames were added inside the payment region. Skimmers insert
+      exactly these elements next to the card fields.
+  - id: dom.region-changed.added
+    detector: dom
+    change_type: region_changed
+    when: {added: {gte: 1}}
+    severity: medium
+    why: Elements were added to the payment region.
+  - id: dom.region-changed.removed
+    detector: dom
+    change_type: region_changed
+    when: {removed: {gte: 1}}
+    severity: medium
+    why: Elements were removed from the payment region.
+  - id: dom.region-changed
+    detector: dom
+    change_type: region_changed
+    severity: low
+    why: Attributes or text inside the payment region changed.
+
+  # --- visual ---------------------------------------------------------------------
+  - id: visual.region-changed.large
+    detector: visual
+    change_type: region_changed
+    when: {changed_percentage: {gte: 2}}
+    severity: high
+    why: >-
+      A large part of the payment area looks different. Overlays and fake forms are visible
+      changes that script-only tools miss; compare the overlay with the baseline.
+  - id: visual.region-changed
+    detector: visual
+    change_type: region_changed
+    severity: medium
+    why: The payment area renders differently from the baseline.
+
+  # --- tls ------------------------------------------------------------------------
+  - id: tls.issuer-changed
+    detector: tls
+    change_type: issuer_changed
+    severity: high
+    why: The certificate is now issued by a different CA; confirm the change with the host owner.
+  - id: tls.untrusted
+    detector: tls
+    change_type: untrusted
+    severity: high
+    why: The certificate is no longer trusted by the system trust store.
+  - id: tls.expiring.expired
+    detector: tls
+    change_type: expiring
+    when: {expired: true}
+    severity: high
+    why: The certificate has expired.
+  - id: tls.expiring
+    detector: tls
+    change_type: expiring
+    severity: medium
+    why: The certificate expires in less than 14 days.
+  - id: tls.error
+    detector: tls
+    change_type: tls_error
+    severity: medium
+    why: The TLS handshake failed for the payment page host.
+  - id: tls.certificate-changed
+    detector: tls
+    change_type: certificate_changed
+    severity: low
+    why: The certificate changed with the same issuer (usually a routine renewal).
+
+  # --- Blink itself -----------------------------------------------------------------
+  - id: blink.detector-failed
+    detector: blink
+    change_type: detector_failed
+    severity: medium
+    why: A detector crashed, so some changes may be unreported. Check the error and report it.

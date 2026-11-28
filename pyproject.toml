@@ -76,7 +76,7 @@ dev = [
 where = ["src"]
 
 [tool.setuptools.package-data]
-blink_visual = ["lab/assets/*", "py.typed"]
+blink_visual = ["lab/assets/*", "rules/*.yaml", "py.typed"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

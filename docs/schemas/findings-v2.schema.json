@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/danielguillaumont/blink/blob/main/docs/schemas/findings-v2.schema.json",
+  "title": "Blink scan report (findings schema v2)",
+  "description": "Output of `blink scan --json`. Schema v1 is the `blink compare` report and is unchanged.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "kind", "run_id", "blink_version", "started_at", "finished_at",
+               "fail_on", "gate", "summary", "targets", "findings"],
+  "properties": {
+    "schema_version": {"const": 2},
+    "kind": {"const": "blink.scan"},
+    "run_id": {"type": "string", "pattern": "^run-"},
+    "blink_version": {"type": "string"},
+    "started_at": {"$ref": "#/$defs/timestamp"},
+    "finished_at": {"$ref": "#/$defs/timestamp"},
+    "fail_on": {"oneOf": [{"$ref": "#/$defs/severity"}, {"type": "null"}]},
+    "gate": {"enum": ["passed", "failed", "skipped"]},
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["findings", "by_severity", "max_severity", "targets", "capture_failed", "no_baseline"],
+      "properties": {
+        "findings": {"type": "integer", "minimum": 0},
+        "by_severity": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["info", "low", "medium", "high", "critical"],
+          "properties": {
+            "info": {"type": "integer", "minimum": 0},
+            "low": {"type": "integer", "minimum": 0},
+            "medium": {"type": "integer", "minimum": 0},
+            "high": {"type": "integer", "minimum": 0},
+            "critical": {"type": "integer", "minimum": 0}
+          }
+        },
+        "max_severity": {"oneOf": [{"$ref": "#/$defs/severity"}, {"type": "null"}]},
+        "targets": {"type": "integer", "minimum": 0},
+        "capture_failed": {"type": "integer", "minimum": 0},
+        "no_baseline": {"type": "integer", "minimum": 0}
+      }
+    },
+    "targets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["target", "profile", "status", "baseline_snapshot", "current_snapshot", "error", "findings"],
+        "properties": {
+          "target": {"type": "string"},
+          "profile": {"type": "string"},
+          "status": {"enum": ["ok", "no_baseline", "capture_failed"]},
+          "baseline_snapshot": {"type": ["string", "null"]},
+          "current_snapshot": {"type": ["string", "null"]},
+          "error": {"type": ["string", "null"]},
+          "findings": {"type": "integer", "minimum": 0}
+        }
+      }
+    },
+    "findings": {"type": "array", "items": {"$ref": "#/$defs/finding"}}
+  },
+  "$defs": {
+    "timestamp": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}([.][0-9]+)?Z$"},
+    "severity": {"enum": ["info", "low", "medium", "high", "critical"]},
+    "finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "fingerprint", "target", "profile", "detector", "change_type", "severity",
+                   "title", "why", "rule_id", "subject", "attributes", "evidence"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[0-9a-f]{16}$"},
+        "fingerprint": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "target": {"type": "string", "minLength": 1},
+        "profile": {"type": "string", "minLength": 1},
+        "detector": {"enum": ["scripts", "network", "headers", "forms", "dom", "visual", "tls", "inventory", "schedule", "blink"]},
+        "change_type": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+        "severity": {"$ref": "#/$defs/severity"},
+        "title": {"type": "string", "minLength": 1},
+        "why": {"type": "string", "minLength": 1},
+        "rule_id": {"type": "string", "minLength": 1},
+        "subject": {"type": "string"},
+        "attributes": {
+          "type": "object",
+          "additionalProperties": {"type": ["string", "number", "boolean", "null"]}
+        },
+        "evidence": {"type": "object"}
+      }
+    }
+  }
+}

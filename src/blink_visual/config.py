@@ -73,6 +73,14 @@ class NormalizeConfig(_Model):
     regexes: list[RegexRule] = Field(default_factory=list)
 
 
+class VisualConfig(_Model):
+    """Blink 1.0 engine settings for the payment-region visual detector."""
+
+    threshold: int = Field(default=15, ge=0, le=255)
+    min_region_pixels: int = Field(default=25, ge=1)
+    min_change_percent: float = Field(default=0.05, ge=0, le=100)
+
+
 class TargetConfig(_Model):
     name: Name
     url: str
@@ -83,6 +91,7 @@ class TargetConfig(_Model):
     timeout_s: float = Field(default=30.0, gt=0, le=300)
     settle_ms: int = Field(default=250, ge=0, le=10_000)
     normalize: NormalizeConfig = Field(default_factory=NormalizeConfig)
+    visual: VisualConfig = Field(default_factory=VisualConfig)
 
     @field_validator("url")
     @classmethod
@@ -94,6 +103,8 @@ class BlinkConfig(_Model):
     version: Literal[1] = 1
     store: str = ".blink"
     inventory: str = "blink.inventory.yaml"
+    rules: str | None = None
+    """Optional project rules file, evaluated before the packaged default rules."""
     profiles: dict[Name, ProfileConfig] = Field(default_factory=dict)
     targets: list[TargetConfig] = Field(default_factory=list)
 

@@ -20,7 +20,12 @@ python -m pip install -e ".[capture,server]" && python -m playwright install chr
 blink lab &                      # local demo shop on 127.0.0.1:8780 (docs/lab.md)
 blink init --lab                 # blink.yaml for the lab checkout (docs/configuration.md)
 blink capture lab-checkout       # deterministic snapshot bundle under .blink/
+blink baseline lab-checkout      # record the known-good baseline
+blink lab --scenario overlay_form_added
+blink scan --fail-on high        # findings with severity and "why it matters"; exit 1 on high+
 ```
+
+Detectors, rules and the findings JSON schema are documented in [`docs/detectors.md`](docs/detectors.md).
 
 `blink compare` keeps its 1.0 behaviour, pinned by a byte-for-byte golden test.
 

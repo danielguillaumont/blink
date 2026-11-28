@@ -42,6 +42,50 @@ MIGRATIONS: list[str] = [
         PRIMARY KEY (snapshot_id, role)
     );
     """,
+    # 2: baselines, runs and findings
+    """
+    CREATE TABLE baselines (
+        target TEXT NOT NULL,
+        profile TEXT NOT NULL,
+        snapshot_id TEXT NOT NULL REFERENCES snapshots(id),
+        set_at TEXT NOT NULL,
+        reason TEXT NOT NULL DEFAULT '',
+        PRIMARY KEY (target, profile)
+    );
+    CREATE TABLE runs (
+        id TEXT PRIMARY KEY,
+        kind TEXT NOT NULL,
+        started_at TEXT NOT NULL,
+        finished_at TEXT NOT NULL,
+        status TEXT NOT NULL,
+        max_severity INTEGER,
+        report_sha256 TEXT REFERENCES blobs(sha256)
+    );
+    CREATE INDEX runs_by_time ON runs(started_at);
+    CREATE TABLE run_results (
+        run_id TEXT NOT NULL REFERENCES runs(id),
+        target TEXT NOT NULL,
+        profile TEXT NOT NULL,
+        status TEXT NOT NULL,
+        baseline_snapshot TEXT,
+        current_snapshot TEXT,
+        error TEXT,
+        PRIMARY KEY (run_id, target, profile)
+    );
+    CREATE TABLE findings (
+        run_id TEXT NOT NULL REFERENCES runs(id),
+        fingerprint TEXT NOT NULL,
+        target TEXT NOT NULL,
+        profile TEXT NOT NULL,
+        detector TEXT NOT NULL,
+        change_type TEXT NOT NULL,
+        severity INTEGER NOT NULL,
+        title TEXT NOT NULL,
+        payload TEXT NOT NULL,
+        PRIMARY KEY (run_id, fingerprint)
+    );
+    CREATE INDEX findings_by_fingerprint ON findings(fingerprint);
+    """,
 ]
 
 
