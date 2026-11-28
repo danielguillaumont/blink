@@ -8,6 +8,7 @@ command, or set `BLINK_CONFIG`, to use a file other than `./blink.yaml`.
 version: 1                       # configuration schema version
 store: .blink                    # evidence store (git-ignored): blobs, SQLite index, keys
 inventory: blink.inventory.yaml  # approved script inventory (commit this file)
+rules: blink.rules.yaml          # optional severity rules, evaluated before the defaults
 
 profiles:                        # optional custom browser profiles
   tablet:
@@ -38,7 +39,13 @@ targets:
       regexes:                   # applied last to the serialized DOM
         - pattern: 'build-[0-9a-f]{8}'
           replacement: 'build-<id>'
+    visual:                      # Blink 1.0 engine on the payment-region screenshot
+      threshold: 15              # max-channel difference that counts as changed (0-255)
+      min_region_pixels: 25      # ignore connected changes smaller than this
+      min_change_percent: 0.05   # ignore changes below this share of the region
 ```
+
+See [detectors.md](detectors.md) for what each detector reports and how rules grade it.
 
 ## Built-in profiles
 
