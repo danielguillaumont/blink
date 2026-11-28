@@ -108,7 +108,7 @@ def test_capture_records_tamper_signals(lab_project, capturer, clean_lab):
     assert not iframe.visible
 
 
-def test_unreachable_target_exits_3(tmp_path, monkeypatch, capsys):
+def test_unreachable_target_exits_3(tmp_path, monkeypatch, capsys, capturer):
     sock = socket.socket()
     sock.bind(("127.0.0.1", 0))
     port = sock.getsockname()[1]
@@ -154,7 +154,7 @@ def test_hanging_target_times_out_within_budget(tmp_path, capturer):
     assert elapsed < 2 + 1.5, f"took {elapsed:.1f}s for a 2s timeout"
 
 
-def test_cli_capture_by_name(lab_project, monkeypatch, capsys):
+def test_cli_capture_by_name(lab_project, monkeypatch, capsys, capturer):
     monkeypatch.chdir(lab_project.root)
     code = main(["capture", "lab-checkout", "--profile", "desktop-chrome"])
     assert code == 0, capsys.readouterr().err
@@ -170,7 +170,7 @@ def test_capture_unknown_profile_is_a_usage_error(lab_project, monkeypatch, caps
     assert "unknown profile" in capsys.readouterr().err
 
 
-def test_capture_json_output(lab_project, monkeypatch, capsys):
+def test_capture_json_output(lab_project, monkeypatch, capsys, capturer):
     import json
 
     monkeypatch.chdir(lab_project.root)

@@ -21,6 +21,13 @@ def _browser_skip_reason() -> str | None:
     return None
 
 
+def pytest_runtest_setup(item: pytest.Item) -> None:
+    if item.get_closest_marker("browser") is not None:
+        reason = _browser_skip_reason()
+        if reason:
+            pytest.skip(reason)
+
+
 @pytest.fixture(scope="session")
 def lab() -> Iterator[Any]:
     pytest.importorskip("fastapi", reason="the lab needs the [server] extra")
