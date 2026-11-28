@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="blink-csrf" content="{{ csrf }}">
+  <meta name="htmx-config" content='{"includeIndicatorStyles": false, "allowEval": false, "allowScriptTags": false, "selfRequestsOnly": true}'>
+  <title>{% block title %}Blink{% endblock %} · Blink</title>
+  <link rel="stylesheet" href="/static/blink.css">
+  <script src="/static/htmx.min.js" defer></script>
+  <script src="/static/blink.js" defer></script>
+</head>
+<body>
+  <header class="top">
+    <a class="brand" href="/">Blink</a>
+    <nav>
+      <a href="/" class="{{ 'active' if nav == 'targets' }}">Targets</a>
+      <a href="/runs" class="{{ 'active' if nav in ('runs', 'run', 'finding') }}">Runs</a>
+      <a href="/alerts" class="{{ 'active' if nav == 'alerts' }}">Alerts</a>
+      <a href="/inventory" class="{{ 'active' if nav == 'inventory' }}">Inventory</a>
+      <a href="/settings" class="{{ 'active' if nav == 'settings' }}">Settings</a>
+      <a href="/docs">API</a>
+    </nav>
+    <form id="unlock-form" class="unlock" autocomplete="off">
+      <span id="lock-state" class="lock-state">Locked</span>
+      <label class="visually-hidden" for="unlock-token">API token</label>
+      <input id="unlock-token" name="token" type="password" placeholder="API token" required>
+      <button type="submit">Unlock</button>
+      <button type="button" id="lock-button" class="secondary">Lock</button>
+    </form>
+  </header>
+  <div id="flash" class="flash" role="alert" hidden></div>
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+  <footer>Blink {{ version }} · bound to {{ 'loopback' if loopback else 'a network address (login required)' }} · changes need the API token from <code>.blink/blink.token</code></footer>
+</body>
+</html>

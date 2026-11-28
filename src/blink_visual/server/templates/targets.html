@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Targets{% endblock %}
+{% block content %}
+<h1>Targets</h1>
+{% if not targets %}
+<p class="empty">No targets configured. Add one to <code>blink.yaml</code> or run <code>blink init --url URL</code>.</p>
+{% endif %}
+{% for t in targets %}
+<section class="card" id="target-{{ t.name }}">
+  <h2>{{ t.name }} {% if t.open_alerts %}<a class="badge high" href="/alerts">{{ t.open_alerts }} open alert{{ 's' if t.open_alerts != 1 }}</a>{% endif %}</h2>
+  <p class="muted"><code>{{ t.url }}</code></p>
+  <table>
+    <thead><tr><th>Profile</th><th>Baseline</th><th>Last run</th><th>Status</th><th>Max severity</th></tr></thead>
+    <tbody>
+    {% for p in t.profiles %}
+      <tr>
+        <td>{{ p.profile }}</td>
+        <td>{% if p.baseline_snapshot %}<code>{{ p.baseline_snapshot }}</code><br><span class="muted">{{ p.baseline_set_at }}</span>{% else %}<span class="badge medium">none</span>{% endif %}</td>
+        <td>{% if p.last_run %}<a href="/runs/{{ p.last_run.id }}">{{ p.last_run.finished_at }}</a>{% else %}<span class="muted">never</span>{% endif %}</td>
+        <td>{{ p.last_run.status if p.last_run else '' }}</td>
+        <td>{% if p.last_severity %}<span class="badge {{ p.last_severity }}">{{ p.last_severity }}</span>{% elif p.last_run %}<span class="badge ok">clean</span>{% endif %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endfor %}
+{% endblock %}

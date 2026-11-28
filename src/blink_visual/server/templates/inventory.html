@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Inventory{% endblock %}
+{% block content %}
+<h1>Script inventory <span class="muted">(PCI DSS 6.4.3)</span></h1>
+<p class="muted">Approvals are written to <code>blink.inventory.yaml</code> (commit it) and recorded in the ledger. Unlock with the API token to approve.</p>
+{% if not rows %}<p class="empty">No scripts yet. Record a baseline first (<code>blink baseline</code>).</p>{% endif %}
+<table class="inventory">
+  <thead><tr><th>Script</th><th>Type</th><th>State</th><th>Justification / owner</th><th>Approve</th></tr></thead>
+  <tbody>
+  {% for row in rows %}{% include "_inventory_row.html" %}{% endfor %}
+  </tbody>
+</table>
+{% endblock %}

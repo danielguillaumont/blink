@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}{{ finding.title }}{% endblock %}
+{% block content %}
+<p><a href="/runs/{{ run_id }}">← run <code>{{ run_id }}</code></a></p>
+<h1><span class="badge {{ finding.severity }}">{{ finding.severity }}</span> {{ finding.title }}</h1>
+<p class="muted"><code>{{ finding.detector }}.{{ finding.change_type }}</code> · {{ finding.target }} [{{ finding.profile }}] · finding <code>{{ finding.id }}</code>
+  {% if alert %}· alert <a href="/alerts?state={{ alert.state }}"><code>{{ alert.id }}</code></a> ({{ alert.state }}){% endif %}</p>
+<section class="card why">
+  <h2>Why it matters</h2>
+  <p>{{ finding.why }}</p>
+  <p class="muted">Rule <code>{{ finding.rule_id }}</code> · subject <code>{{ finding.subject }}</code></p>
+</section>
+
+{% if images %}
+<section class="card">
+  <h2>Screenshots</h2>
+  <div class="gallery">
+  {% for img in images %}
+    <figure><img src="/blobs/{{ img.blob }}" alt="{{ img.label }}"><figcaption>{{ img.label }}</figcaption></figure>
+  {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{% if diff %}
+<section class="card">
+  <h2>Diff</h2>
+  <pre class="diff">{% for line in diff %}<span class="{{ line.kind }}">{{ line.text }}</span>
+{% endfor %}</pre>
+</section>
+{% endif %}
+
+{% if static_analysis %}
+<section class="card">
+  <h2>Static analysis: risk {{ static_analysis.score }}/100</h2>
+  <ul>
+  {% for factor in static_analysis.factors %}
+    <li><strong>{{ factor.name }}</strong> (+{{ factor.weight }}, {{ factor.count }}×): {{ factor.explanation }}
+      {% if factor.examples %}<ul>{% for ex in factor.examples %}<li><code>{{ ex }}</code></li>{% endfor %}</ul>{% endif %}</li>
+  {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+{% if headers %}
+<section class="card">
+  <h2>Response headers</h2>
+  <table>
+    <thead><tr><th>Header</th><th>Baseline</th><th>Current</th></tr></thead>
+    <tbody>
+    {% for h in headers %}
+      <tr class="{{ 'changed' if h.changed }}"><td><code>{{ h.name }}</code></td><td><code>{{ h.before or '—' }}</code></td><td><code>{{ h.after or '—' }}</code></td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endif %}
+
+{% if har %}
+<section class="card">
+  <h2>HAR excerpt</h2>
+  <table>
+    <thead><tr><th>Method</th><th>URL (query removed)</th><th>Status</th><th>Type</th><th>Size</th></tr></thead>
+    <tbody>
+    {% for e in har %}
+      <tr class="{{ 'changed' if e.match }}"><td>{{ e.method }}</td><td><code>{{ e.url }}</code></td><td>{{ e.status }}</td><td>{{ e.mime or '' }}</td><td>{{ e.size if e.size is not none else '' }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endif %}
+
+<section class="card">
+  <h2>Evidence</h2>
+  <pre>{{ finding.evidence | tojson_pretty }}</pre>
+  <h3>Attributes</h3>
+  <pre>{{ finding.attributes | tojson_pretty }}</pre>
+  <p class="muted">Baseline snapshot <code>{{ baseline_snapshot or 'n/a' }}</code> · current snapshot <code>{{ current_snapshot or 'n/a' }}</code></p>
+</section>
+{% endblock %}

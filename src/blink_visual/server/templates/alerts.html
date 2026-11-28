@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Alerts{% endblock %}
+{% block content %}
+<h1>Alerts</h1>
+<p class="filters">
+  <a href="/alerts" class="{{ 'active' if state == 'active' }}">open + acknowledged</a>
+  {% for s in states %}<a href="/alerts?state={{ s }}" class="{{ 'active' if state == s }}">{{ s }}</a> {% endfor %}
+  <a href="/alerts?state=all" class="{{ 'active' if state == 'all' }}">all</a>
+</p>
+{% if not alerts %}<p class="empty">No alerts in this view.</p>{% endif %}
+<table class="alerts">
+  <thead><tr><th>Severity</th><th>Alert</th><th>Seen</th><th>State</th><th>Actions</th></tr></thead>
+  <tbody>
+  {% for alert in alerts %}{% include "_alert_row.html" %}{% endfor %}
+  </tbody>
+</table>
+{% endblock %}

@@ -46,6 +46,7 @@ server = [
     "fastapi>=0.115,<1",
     "uvicorn>=0.30,<1",
     "python-multipart>=0.0.18",
+    "jinja2>=3.1,<4",
     "apscheduler>=3.10,<4",
     "prometheus-client>=0.20,<1",
     "structlog>=24",
@@ -79,7 +80,13 @@ dev = [
 where = ["src"]
 
 [tool.setuptools.package-data]
-blink_visual = ["lab/assets/*", "rules/*.yaml", "py.typed"]
+blink_visual = [
+    "lab/assets/*",
+    "rules/*.yaml",
+    "server/templates/*.html",
+    "server/static/*",
+    "py.typed",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
