@@ -10,6 +10,20 @@
 
 ![Blink workspace showing original and modified synthetic dashboards, metrics and comparison controls](assets/screenshots/workspace.png)
 
+## Blink 2.0 (in development)
+
+Blink is becoming a self-hosted **payment page integrity monitor** for PCI DSS 6.4.3 and 11.6.1
+(see [`BUILD_PLAN.md`](BUILD_PLAN.md) and [`docs/progress.md`](docs/progress.md)). Available so far:
+
+```bash
+python -m pip install -e ".[capture,server]" && python -m playwright install chromium
+blink lab &                      # local demo shop on 127.0.0.1:8780 (docs/lab.md)
+blink init --lab                 # blink.yaml for the lab checkout (docs/configuration.md)
+blink capture lab-checkout       # deterministic snapshot bundle under .blink/
+```
+
+`blink compare` keeps its 1.0 behaviour, pinned by a byte-for-byte golden test.
+
 ## What Blink does
 
 - Measure thresholded pixel differences with vectorized NumPy operations.

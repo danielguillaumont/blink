@@ -66,6 +66,9 @@ def parser():
     compare.add_argument(
         "--no-region-bounds", action="store_true", help="Omit bounding boxes from exported overlay"
     )
+    from .commands import register
+
+    register(commands)
     return root
 
 
@@ -90,6 +93,10 @@ def export(directory, after, result, report, boxes):
 
 def main(argv: list[str] | None = None) -> int:
     args = parser().parse_args(argv)
+    if args.command != "compare":
+        from .commands import dispatch
+
+        return dispatch(args)
     try:
         before, after = read_image(args.before), read_image(args.after)
         result = analyze_pixels(

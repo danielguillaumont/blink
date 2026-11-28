@@ -9,3 +9,7 @@
 *.jpg binary
 # Golden outputs are compared byte-for-byte; never convert line endings.
 tests/golden/** -text
+*.js text eol=lf
+*.css text eol=lf
+*.html text eol=lf
+*.json text eol=lf

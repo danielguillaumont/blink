@@ -23,7 +23,7 @@ jobs:
         with:
           python-version: '3.12'
           cache: pip
-      - run: python -m pip install -e ".[dev]"
+      - run: python -m pip install -e ".[dev,capture,server]"
       - name: ruff
         run: ruff check . && ruff format --check .
       - name: mypy (strict, new code)
@@ -52,7 +52,14 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
           cache: pip
-      - run: python -m pip install -e ".[dev,ui]"
+      - run: python -m pip install -e ".[dev,ui,capture,server]"
+      - name: Install Chromium (Linux)
+        if: runner.os == 'Linux'
+        run: python -m playwright install --with-deps chromium
+      - name: Skip browser tests (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: echo "BLINK_SKIP_BROWSER=1" >> "$GITHUB_ENV"
       - run: python -m pytest -q --cov=src/blink_visual --cov-report=term-missing
       - run: python examples/smoke.py
       - run: python examples/scientific_smoke.py

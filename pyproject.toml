@@ -23,6 +23,10 @@ dependencies = [
     "Pillow>=10.3",
     "scipy>=1.11,<2",
     "scikit-image>=0.22,<1",
+    "pydantic>=2.7,<3",
+    "PyYAML>=6,<7",
+    "beautifulsoup4>=4.12,<5",
+    "cryptography>=43",
 ]
 
 [project.urls]
@@ -71,6 +75,9 @@ dev = [
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+blink_visual = ["lab/assets/*", "py.typed"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra"
@@ -118,6 +125,7 @@ python_version = "3.11"
 strict = true
 warn_unreachable = true
 pretty = true
+plugins = ["pydantic.mypy"]
 
 # The 1.0 engine is kept API-stable and is not retrofitted with strict typing.
 [[tool.mypy.overrides]]

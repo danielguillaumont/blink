@@ -1,0 +1,30 @@
+/* Blink lab shop. Fixed sizes keep layout stable while noise rotates. */
+* { box-sizing: border-box; }
+body { margin: 0; font-family: Arial, Helvetica, sans-serif; background: #f4f4f2; color: #141414; }
+.site-header { display: flex; justify-content: space-between; align-items: center;
+  height: 56px; padding: 0 24px; background: #141414; color: #f4f4f2; }
+.brand { font-weight: 700; font-size: 20px; }
+.timestamp { display: inline-block; width: 280px; text-align: right; font-size: 12px;
+  white-space: nowrap; overflow: hidden; }
+.promo { height: 40px; line-height: 40px; padding: 0 24px; background: #c6f65c;
+  font-size: 14px; white-space: nowrap; overflow: hidden; }
+main { display: flex; flex-wrap: wrap; gap: 24px; padding: 24px; }
+.summary, .payment { background: #ffffff; border: 1px solid #d8d8d4; border-radius: 8px;
+  padding: 20px; }
+.summary { flex: 1 1 280px; max-width: 420px; }
+.payment { position: relative; flex: 1 1 320px; max-width: 460px; }
+.payment h2, .summary h2 { margin: 0 0 16px; font-size: 18px; }
+.line { display: flex; justify-content: space-between; margin: 8px 0; font-size: 14px; }
+.payment label { display: block; margin: 0 0 12px; font-size: 13px; }
+.payment input { display: block; width: 100%; height: 36px; margin-top: 4px; padding: 0 8px;
+  border: 1px solid #b8b8b4; border-radius: 4px; font-size: 14px; }
+.row { display: flex; gap: 12px; }
+.row label { flex: 1; }
+.pay-button { width: 100%; height: 44px; border: 0; border-radius: 6px; background: #1f6f43;
+  color: #ffffff; font-size: 16px; font-weight: 700; }
+#trust-badge { height: 20px; margin-top: 12px; font-size: 12px; color: #55574f; }
+.lab-overlay { position: absolute; inset: 52px 20px 40px 20px; background: #ffffff;
+  border: 1px solid #b8b8b4; padding: 16px; }
+.lab-overlay p { margin: 0 0 12px; font-weight: 700; }
+.lab-pixel { position: absolute; left: 0; bottom: 0; width: 1px; height: 1px; }
+footer { padding: 0 24px 24px; font-size: 12px; color: #55574f; }
