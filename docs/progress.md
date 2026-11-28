@@ -83,3 +83,20 @@ Status of each phase in [`BUILD_PLAN.md`](../BUILD_PLAN.md). One branch and one 
   script, acknowledging an alert and opening a finding.
 - **Known gaps:** `/docs` loads Swagger UI from jsDelivr (SRI-pinned), so it needs internet
   access. Browser e2e tests are skipped on the Windows CI leg, as in earlier phases.
+
+## Phase 6: Audit evidence report
+
+- **Date:** 2026-11-27
+- **PR:** #11
+- **Delivered:** `blink report` writes `report.html` (self-contained, no scripts), `report.pdf`
+  (Chromium `page.pdf()`) and a `report.json` sidecar signed with the ledger's ed25519 key
+  (covering the HTML/PDF hashes). Sections: scope and targets; inventory with justification and
+  authorization (approver, date, ledger record); integrity method; evaluation log with the
+  longest gap vs schedule and vs a week; findings and their resolution; ledger verification
+  and signed head; methodology and limitations; disclaimer. A failed ledger verification puts
+  a banner on the first page and exits 1. `blink verify-report` checks signature and hashes.
+  `docs/pci-mapping.md` maps each 6.4.3 / 11.6.1 element (paraphrased, linking the PCI SSC
+  library). Jinja2 moved to the core dependencies so HTML reports need no extra.
+- **Known gaps:** without `--public-key` a report signature proves integrity but not origin;
+  distribute the ledger public key separately. The PDF needs the `[capture]` extra and
+  Chromium (`--no-pdf` otherwise); the PDF test is skipped on the Windows CI leg.
