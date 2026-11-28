@@ -59,6 +59,8 @@ ai = ["anthropic>=0.40"]
 mcp = ["mcp>=1.2,<2"]
 # Stretch: look-alike / clone detection.
 lookalike = ["imagehash>=4.3,<5", "opencv-python-headless>=4.10,<5"]
+# Docs site (mkdocs build --strict).
+docs = ["mkdocs-material>=9.5,<10"]
 # 1.0 Streamlit compare workspace.
 ui = ["streamlit>=1.67,<2"]
 dev = [

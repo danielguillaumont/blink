@@ -61,5 +61,5 @@ ledgers `alert.accepted-change` and `baseline.set`.
   [configuration.md](../configuration.md)).
 - For a tag manager that changes often, approve the container script as dynamic and govern
   what it loads with CSP. Do not rebaseline blindly.
-- In CI, run the [GitHub Action](../../action.yml) against staging so changes are approved
+- In CI, run the [GitHub Action](https://github.com/danielguillaumont/blink/blob/main/action.yml) against staging so changes are approved
   before they reach production.
