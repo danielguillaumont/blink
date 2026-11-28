@@ -1,0 +1,75 @@
+# Exercises the composite action (action.yml) the way a user would, against the localhost lab:
+# a clean scan must pass the gate and a tampered checkout must fail it.
+# In your own repository: uses: danielguillaumont/blink@v2 with a staging URL you own.
+name: Action sample
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: action-sample-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  scan-lab:
+    name: blink action against the lab
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Start the lab (localhost only)
+        run: |
+          python -m pip install --disable-pip-version-check ".[server]"
+          nohup blink lab --port 8780 > lab.log 2>&1 &
+          for _ in $(seq 1 30); do
+            curl -fsS -o /dev/null http://127.0.0.1:8780/checkout && exit 0
+            sleep 1
+          done
+          cat lab.log
+          exit 1
+
+      - name: Scan the clean checkout (must pass)
+        id: clean
+        uses: ./
+        with:
+          config: examples/action/blink.yaml
+          fail-on: high
+          store-cache: 'false'
+          evidence-name: blink-evidence-clean
+
+      - name: Tamper with the lab
+        run: blink lab --port 8780 --scenario new_third_party_script
+
+      - name: Scan the tampered checkout (must fail)
+        id: tampered
+        continue-on-error: true
+        uses: ./
+        with:
+          config: examples/action/blink.yaml
+          fail-on: high
+          store-cache: 'false'
+          evidence-name: blink-evidence-tampered
+
+      - name: Check the gate outcomes
+        env:
+          CLEAN_CODE: ${{ steps.clean.outputs.exit-code }}
+          TAMPERED_CODE: ${{ steps.tampered.outputs.exit-code }}
+          TAMPERED_OUTCOME: ${{ steps.tampered.outcome }}
+          TAMPERED_FINDINGS: ${{ steps.tampered.outputs.findings }}
+        run: |
+          echo "clean=$CLEAN_CODE tampered=$TAMPERED_CODE ($TAMPERED_OUTCOME, $TAMPERED_FINDINGS findings)"
+          test "$CLEAN_CODE" = "0"
+          test "$TAMPERED_CODE" = "1"
+          test "$TAMPERED_OUTCOME" = "failure"
+          test "$TAMPERED_FINDINGS" -ge 1
