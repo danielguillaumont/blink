@@ -80,7 +80,7 @@ runs:
           fi
           blink init -c "$BLINK_CONFIG_PATH" --url "$BLINK_URL" --name staging
         fi
-        store=$(python -c 'import sys; from blink_visual.project import Project; print(Project.load(sys.argv[1]).store_dir)' "$BLINK_CONFIG_PATH")
+        store=$(python -c 'import sys; from pathlib import Path; from blink_visual.project import Project; print(Project.load(Path(sys.argv[1])).store_dir)' "$BLINK_CONFIG_PATH")
         echo "store=$store" >> "$GITHUB_OUTPUT"
         echo "evidence=${RUNNER_TEMP}/blink-evidence" >> "$GITHUB_OUTPUT"
         mkdir -p "${RUNNER_TEMP}/blink-evidence"
