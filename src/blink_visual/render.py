@@ -1,4 +1,5 @@
 """Render comparison evidence as RGB Pillow images without altering inputs."""
+
 import numpy as np
 from PIL import Image, ImageDraw
 
@@ -9,7 +10,11 @@ PINK = (255, 82, 123)
 
 def difference_overlay(after: np.ndarray, result: Analysis, *, boxes: bool = True) -> Image.Image:
     p = result.pixels
-    if not isinstance(after, np.ndarray) or after.dtype != np.uint8 or after.shape != (p.height, p.width, 3):
+    if (
+        not isinstance(after, np.ndarray)
+        or after.dtype != np.uint8
+        or after.shape != (p.height, p.width, 3)
+    ):
         raise ValueError("Overlay image must match the analyzed RGB dimensions.")
     out = after.copy()
     mask = p.changed_mask
@@ -18,7 +23,7 @@ def difference_overlay(after: np.ndarray, result: Analysis, *, boxes: bool = Tru
     if boxes:
         draw = ImageDraw.Draw(image)
         for r in result.regions:
-            draw.rectangle((r.x, r.y, r.x+r.width-1, r.y+r.height-1), outline=PINK)
+            draw.rectangle((r.x, r.y, r.x + r.width - 1, r.y + r.height - 1), outline=PINK)
     return image
 
 

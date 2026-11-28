@@ -1,0 +1,35 @@
+# Install with: pre-commit install
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-yaml
+        exclude: ^deploy/.*\.ya?ml$
+      - id: check-toml
+      - id: end-of-file-fixer
+        exclude: ^tests/golden/
+      - id: trailing-whitespace
+        exclude: ^tests/golden/
+      - id: check-added-large-files
+        args: [--maxkb=2048]
+      - id: detect-private-key
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.17.6
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+  - repo: local
+    hooks:
+      - id: mypy
+        name: mypy (new code, strict)
+        entry: mypy src/blink_visual --exclude 'src/blink_visual/(compare|analysis|render|workspace|cli)\.py'
+        language: system
+        pass_filenames: false
+        types: [python]
+      - id: bandit
+        name: bandit
+        entry: bandit -q -r src
+        language: system
+        pass_filenames: false
+        types: [python]

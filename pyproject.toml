@@ -4,20 +4,69 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "blink-visual"
-version = "1.0.0"
-description = "Local-first numerical image comparison toolkit."
+version = "2.0.0.dev0"
+description = "Self-hosted payment page integrity monitor: detect checkout tampering (Magecart / e-skimming) and produce evidence for PCI DSS 6.4.3 and 11.6.1."
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
 license-files = ["LICENSE"]
-dependencies = ["numpy>=1.26,<3", "Pillow>=10.3", "scipy>=1.11,<2", "scikit-image>=0.22,<1"]
+keywords = ["pci-dss", "magecart", "e-skimming", "csp", "sri", "visual-diff", "security"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Security",
+    "Topic :: Software Development :: Testing",
+]
+dependencies = [
+    "numpy>=1.26,<3",
+    "Pillow>=10.3",
+    "scipy>=1.11,<2",
+    "scikit-image>=0.22,<1",
+]
+
+[project.urls]
+Homepage = "https://github.com/danielguillaumont/blink"
+Issues = "https://github.com/danielguillaumont/blink/issues"
 
 [project.scripts]
 blink = "blink_visual.cli:main"
 
 [project.optional-dependencies]
-dev = ["pytest>=8,<10"]
+# Browser capture (Playwright Chromium). Run `playwright install chromium` after installing.
+capture = ["playwright>=1.49,<2"]
+# Dashboard, API, scheduler and metrics.
+server = [
+    "fastapi>=0.115,<1",
+    "uvicorn>=0.30,<1",
+    "python-multipart>=0.0.18",
+    "apscheduler>=3.10,<4",
+    "prometheus-client>=0.20,<1",
+]
+# Microsoft Sentinel sink (Logs Ingestion API).
+sentinel = ["azure-identity>=1.17,<2", "azure-monitor-ingestion>=1.0,<2"]
+# Optional LLM triage summaries (off by default).
+ai = ["anthropic>=0.40"]
+# Read-only MCP server.
+mcp = ["mcp>=1.2,<2"]
+# Stretch: look-alike / clone detection.
+lookalike = ["imagehash>=4.3,<5", "opencv-python-headless>=4.10,<5"]
+# 1.0 Streamlit compare workspace.
 ui = ["streamlit>=1.67,<2"]
+dev = [
+    "pytest>=8,<10",
+    "pytest-cov>=5",
+    "hypothesis>=6.100",
+    "jsonschema>=4.22",
+    "httpx>=0.27",
+    "ruff>=0.8",
+    "mypy>=1.13",
+    "types-PyYAML",
+    "bandit>=1.8",
+    "pip-audit>=2.7",
+    "pre-commit>=4",
+    "cyclonedx-bom>=5",
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -25,3 +74,65 @@ where = ["src"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra"
+markers = [
+    "browser: needs Playwright Chromium (skipped when it is not installed or BLINK_SKIP_BROWSER=1)",
+    "integration: runs the localhost lab in-process",
+]
+
+[tool.coverage.run]
+source = ["blink_visual"]
+branch = true
+
+[tool.coverage.report]
+skip_empty = true
+exclude_also = ["if TYPE_CHECKING:", "raise NotImplementedError", "@overload"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = ["build", "dist", "outputs", ".blink"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF", "C4", "PIE", "PT", "S"]
+ignore = [
+    "S101",   # assert is fine in tests and for type narrowing
+    "PT011",  # broad pytest.raises(ValueError) is used deliberately in 1.0 tests
+    "RUF001", # en-dash in user-facing strings is intentional
+    "RUF002",
+    "PT018",  # composite assertions are readable in short numerical tests
+    "C408",   # dict(...) calls are used deliberately in 1.0 code
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S", "B", "PT006", "PT007"]
+"examples/**" = ["S", "E501", "B023"]
+"app.py" = ["S", "E501", "E741"]
+# 1.0 engine is API-stable; keep its source as shipped.
+"src/blink_visual/analysis.py" = ["B905"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_unreachable = true
+pretty = true
+
+# The 1.0 engine is kept API-stable and is not retrofitted with strict typing.
+[[tool.mypy.overrides]]
+module = [
+    "blink_visual.compare",
+    "blink_visual.analysis",
+    "blink_visual.render",
+    "blink_visual.workspace",
+    "blink_visual.cli",
+]
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = ["scipy.*", "skimage.*", "apscheduler.*", "tree_sitter_javascript.*"]
+ignore_missing_imports = true
+
+[tool.bandit]
+exclude_dirs = ["tests"]

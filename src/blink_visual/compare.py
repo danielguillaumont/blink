@@ -40,9 +40,7 @@ def load_rgb(path: str | Path) -> np.ndarray:
         return np.array(ImageOps.exif_transpose(source).convert("RGB"), dtype=np.uint8)
 
 
-def compare_pixels(
-    before: np.ndarray, after: np.ndarray, *, threshold: int = 0
-) -> PixelComparison:
+def compare_pixels(before: np.ndarray, after: np.ndarray, *, threshold: int = 0) -> PixelComparison:
     """Compare equal-sized uint8 RGB arrays using max channel difference.
 
     A pixel is changed if any channel differs by strictly more than threshold.
@@ -70,15 +68,17 @@ def compare_pixels(
     magnitude.setflags(write=False)
     changed_mask.setflags(write=False)
     return PixelComparison(
-        width=width, height=height, threshold=int(threshold),
-        changed_pixels=count, total_pixels=total,
+        width=width,
+        height=height,
+        threshold=int(threshold),
+        changed_pixels=count,
+        total_pixels=total,
         changed_percentage=100.0 * count / total,
-        magnitude=magnitude, changed_mask=changed_mask,
+        magnitude=magnitude,
+        changed_mask=changed_mask,
     )
 
 
-def compare(
-    before: str | Path, after: str | Path, *, threshold: int = 0
-) -> PixelComparison:
+def compare(before: str | Path, after: str | Path, *, threshold: int = 0) -> PixelComparison:
     """Compare two supported local image files."""
     return compare_pixels(load_rgb(before), load_rgb(after), threshold=threshold)

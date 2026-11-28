@@ -6,7 +6,14 @@ import pytest
 from PIL import Image
 
 from blink_visual import analyze_pixels
-from blink_visual.workspace import demo_pair, decode_upload, png_bytes, report_bytes, split_image, preview_image
+from blink_visual.workspace import (
+    decode_upload,
+    demo_pair,
+    png_bytes,
+    preview_image,
+    report_bytes,
+    split_image,
+)
 
 
 def test_demo_is_deterministic():
@@ -24,24 +31,24 @@ def test_png_roundtrip():
     assert np.array_equal(a, decode_upload(png_bytes(a)))
 
 
-@pytest.mark.parametrize('mode', ['RGBA', 'P'])
+@pytest.mark.parametrize("mode", ["RGBA", "P"])
 def test_unsupported_modes(mode):
     buf = BytesIO()
-    Image.new(mode, (5, 5)).save(buf, format='PNG')
+    Image.new(mode, (5, 5)).save(buf, format="PNG")
     with pytest.raises(ValueError):
         decode_upload(buf.getvalue())
 
 
 def test_oversized_image():
     buf = BytesIO()
-    Image.new('RGB', (2001, 2000)).save(buf, format='PNG')
-    with pytest.raises(ValueError, match='4 million'):
+    Image.new("RGB", (2001, 2000)).save(buf, format="PNG")
+    with pytest.raises(ValueError, match="4 million"):
         decode_upload(buf.getvalue())
 
 
 def test_empty_upload():
     with pytest.raises(ValueError):
-        decode_upload(b'')
+        decode_upload(b"")
 
 
 def test_split_boundaries():
@@ -73,5 +80,5 @@ def test_preview_preserves_pixel_blocks():
 
 
 def test_preview_does_not_enlarge_normal_images():
-    image = Image.new('RGB', (960, 540))
+    image = Image.new("RGB", (960, 540))
     assert preview_image(image) is image

@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "width": 90,
+  "height": 60,
+  "threshold": 15,
+  "total_pixels": 5400,
+  "changed_pixels": 113,
+  "changed_percentage": 2.0925925925925926,
+  "ssim": 0.9367065749753966,
+  "min_region_pixels": 1,
+  "total_regions": 3,
+  "reported_regions": 3,
+  "regions": [
+    {
+      "x": 35,
+      "y": 10,
+      "width": 12,
+      "height": 6,
+      "changed_pixels": 72
+    },
+    {
+      "x": 60,
+      "y": 40,
+      "width": 10,
+      "height": 4,
+      "changed_pixels": 40
+    },
+    {
+      "x": 82,
+      "y": 52,
+      "width": 1,
+      "height": 1,
+      "changed_pixels": 1
+    }
+  ]
+}
