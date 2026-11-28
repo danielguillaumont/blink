@@ -43,7 +43,7 @@ pip-audit
 - Cloaking work uses standard Playwright options only: no bot-protection bypass, no CAPTCHA solving, no fingerprint-spoofing plugins.
 - The Reporting API collector (`blink collect`) is the only component meant to be internet-facing. Everything else stays loopback by default.
 - Static-analysis fixtures are short, non-functional snippets containing the patterns being detected.
-- Use only published test card numbers, as static placeholder text. No real personal data anywhere.
+- Use only published test card numbers (as static placeholder text) or per-run canary PANs from reserved test ranges. No real personal data anywhere.
 - Lab and dashboard bind to 127.0.0.1 by default. Never scan third-party websites in tests or CI.
 - `lookalike` never submits forms or enters credentials.
 - Never store cookie values, Authorization headers or secrets in snapshots, logs or reports.
