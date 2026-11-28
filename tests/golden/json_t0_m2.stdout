@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "width": 90,
+  "height": 60,
+  "threshold": 0,
+  "total_pixels": 5400,
+  "changed_pixels": 114,
+  "changed_percentage": 2.111111111111111,
+  "ssim": 0.9367065749753966,
+  "min_region_pixels": 2,
+  "total_regions": 2,
+  "reported_regions": 2,
+  "regions": [
+    {
+      "x": 35,
+      "y": 10,
+      "width": 12,
+      "height": 6,
+      "changed_pixels": 72
+    },
+    {
+      "x": 60,
+      "y": 40,
+      "width": 10,
+      "height": 4,
+      "changed_pixels": 40
+    }
+  ]
+}
