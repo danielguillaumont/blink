@@ -26,11 +26,12 @@ log "docker compose up"
 log "dashboard health and headers"
 curl -fsS "$BASE/healthz"
 echo
-headers=$(curl -fsS -D - "$BASE/login" | tr -d '\r' | sed '/^$/q')
+body=$(mktemp)
+headers=$(curl -fsS -D - -o "$body" "$BASE/login" | tr -d '\r')
 for h in content-security-policy x-frame-options x-content-type-options strict-transport-security; do
   grep -qi "^$h:" <<<"$headers" || { echo "missing header $h"; exit 1; }
 done
-code=$(curl -s -w '%{http_code}' "$BASE/api/alerts" | tail -c 3)
+code=$(curl -s -o "$body" -w '%{http_code}' "$BASE/api/alerts")
 [ "$code" = "401" ] || { echo "non-loopback API without a token returned $code, expected 401"; exit 1; }
 
 TOKEN=$("${COMPOSE[@]}" exec -T serve cat /data/.blink/blink.token | tr -d '\r\n')
