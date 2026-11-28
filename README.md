@@ -23,9 +23,13 @@ blink capture lab-checkout       # deterministic snapshot bundle under .blink/
 blink baseline lab-checkout      # record the known-good baseline
 blink lab --scenario overlay_form_added
 blink scan --fail-on high        # findings with severity and "why it matters"; exit 1 on high+
+blink inventory --sync           # PCI DSS 6.4.3 script inventory in blink.inventory.yaml
+blink approve SCRIPT_ID --justification "..." --owner web-team
+blink suggest-csp lab-checkout   # minimal CSP + SRI from the approved inventory
 ```
 
-Detectors, rules and the findings JSON schema are documented in [`docs/detectors.md`](docs/detectors.md).
+Detectors, rules and the findings JSON schema are documented in [`docs/detectors.md`](docs/detectors.md);
+the inventory, approvals and static JS risk score in [`docs/inventory.md`](docs/inventory.md).
 
 `blink compare` keeps its 1.0 behaviour, pinned by a byte-for-byte golden test.
 
