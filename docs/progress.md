@@ -53,3 +53,18 @@ Status of each phase in [`BUILD_PLAN.md`](../BUILD_PLAN.md). One branch and one 
   pinning is the control. `suggest-csp` cannot derive origins for entries matched only by
   `url_pattern` (it says so in a note). On hosts whose antivirus blocks writing a skimmer-like
   script, only its hash is kept and no risk score is computed (a warning is recorded).
+
+## Phase 4: Scheduler, ledger and alerting
+
+- **Date:** 2026-11-27
+- **PR:** #9
+- **Delivered:** `blink daemon` (APScheduler: interval/cron, jitter, retries with backoff,
+  concurrency limit, `--once`); missed evaluations and failed captures as findings; the alert
+  state machine with fingerprint dedupe and accept-change rebaselining (`blink alerts`);
+  webhook (generic/Slack/Teams), SMTP, syslog CEF and JSONL sinks with retry and dead-letter;
+  a hash-chained, ed25519-signed ledger with `blink verify-ledger`, key created on `blink init`;
+  structlog JSON logs; Prometheus metrics computed from the store. ADR 0003.
+- **Known gaps:** ledger key rotation is not automated yet. Someone holding both the private
+  key and write access to the store could rewrite history; pin the public key outside the host
+  and keep exported reports (Phase 6). The Microsoft Sentinel sink (`[sentinel]` extra) is a
+  later, optional phase. The 0600 key-mode test is skipped on Windows (runs on Linux CI).
