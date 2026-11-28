@@ -3,6 +3,21 @@
 version: 1
 rules:
   # --- scripts --------------------------------------------------------------------
+  - id: scripts.skimmer-like
+    detector: scripts
+    when: {risk_score: {gte: 70}}
+    severity: critical
+    why: >-
+      Static analysis of the new or changed script found skimmer-like patterns (see the
+      contributing factors in the evidence). Treat this as a suspected compromise.
+  - id: scripts.hash-changed.approved-dynamic
+    detector: scripts
+    change_type: hash_changed
+    when: {approved_dynamic: true}
+    severity: low
+    why: >-
+      The content of a script approved as 'dynamic' in the inventory changed. Its URL is
+      authorized; its content is expected to change.
   - id: scripts.added.third-party
     detector: scripts
     change_type: added
@@ -360,6 +375,31 @@ rules:
     change_type: certificate_changed
     severity: low
     why: The certificate changed with the same issuer (usually a routine renewal).
+
+  # --- inventory (PCI DSS 6.4.3) -------------------------------------------------------
+  - id: inventory.hash-mismatch
+    detector: inventory
+    change_type: hash_mismatch
+    severity: critical
+    why: >-
+      A script approved with a pinned hash now has different content. The approved code is no
+      longer what runs on the payment page: confirm a legitimate release or treat it as a
+      supply-chain compromise.
+  - id: inventory.unapproved.new
+    detector: inventory
+    change_type: unapproved
+    when: {in_baseline: false}
+    severity: high
+    why: >-
+      A script that is not in the approved inventory appeared on the payment page. PCI DSS
+      6.4.3 requires every payment page script to be authorized with a justification.
+  - id: inventory.unapproved
+    detector: inventory
+    change_type: unapproved
+    severity: medium
+    why: >-
+      A payment page script has no approval in the inventory. Approve it with a justification
+      and owner (`blink approve`) or remove it.
 
   # --- Blink itself -----------------------------------------------------------------
   - id: blink.detector-failed

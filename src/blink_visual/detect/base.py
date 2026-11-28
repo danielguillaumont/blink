@@ -4,12 +4,15 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
 
 from ..capture.models import Snapshot, origin_of
 from ..config import TargetConfig
 from ..findings import Finding
 from ..store import Store
+
+if TYPE_CHECKING:
+    from ..inventory import Inventory
 
 
 @dataclass(frozen=True)
@@ -19,6 +22,7 @@ class DetectionContext:
     target: TargetConfig
     store: Store
     now: datetime
+    inventory: Inventory | None = None
 
     @property
     def page_origin(self) -> str | None:

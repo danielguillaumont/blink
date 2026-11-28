@@ -7,6 +7,7 @@ from .base import DetectionContext, Detector
 from .dom import DomDetector
 from .forms import FormsDetector
 from .headers import HeadersDetector
+from .inventory import InventoryDetector
 from .network import NetworkDetector
 from .scripts import ScriptsDetector
 from .tls import TlsDetector
@@ -22,6 +23,7 @@ DETECTORS: tuple[Detector, ...] = (
     DomDetector(),
     VisualDetector(),
     TlsDetector(),
+    InventoryDetector(),
 )
 
 
