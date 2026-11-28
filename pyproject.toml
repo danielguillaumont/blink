@@ -48,6 +48,7 @@ server = [
     "python-multipart>=0.0.18",
     "apscheduler>=3.10,<4",
     "prometheus-client>=0.20,<1",
+    "structlog>=24",
 ]
 # Microsoft Sentinel sink (Logs Ingestion API).
 sentinel = ["azure-identity>=1.17,<2", "azure-monitor-ingestion>=1.0,<2"]
