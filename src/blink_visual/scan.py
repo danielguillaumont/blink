@@ -16,6 +16,7 @@ from .config import TargetConfig
 from .detect import DetectionContext, run_detectors
 from .errors import EXIT_CAPTURE, EXIT_FINDINGS, EXIT_OK, EXIT_USAGE, CaptureError
 from .findings import Finding, Severity
+from .inventory import Inventory, load_inventory
 from .project import Project
 from .rules import RuleEngine
 from .store import Store, utc_now
@@ -143,6 +144,7 @@ def compare_snapshots(
     current: Snapshot,
     *,
     engine: RuleEngine | None = None,
+    inventory: Inventory | None = None,
     now: datetime | None = None,
 ) -> list[Finding]:
     ctx = DetectionContext(
@@ -151,6 +153,7 @@ def compare_snapshots(
         target=target,
         store=store,
         now=now or datetime.now(UTC),
+        inventory=inventory,
     )
     engine = engine or rule_engine(project)
     graded = engine.grade_all(run_detectors(ctx))
@@ -175,6 +178,7 @@ def scan(
     """Capture every target/profile, compare with its baseline and record the run."""
     started = datetime.now(UTC)
     engine = rule_engine(project)
+    inventory = load_inventory(project.inventory_path)
     results: list[TargetResult] = []
     findings: list[Finding] = []
     for target in targets:
@@ -205,7 +209,14 @@ def scan(
                 continue
             baseline = store.load_snapshot(baseline_id)
             found = compare_snapshots(
-                project, store, target, baseline, current, engine=engine, now=now
+                project,
+                store,
+                target,
+                baseline,
+                current,
+                engine=engine,
+                inventory=inventory,
+                now=now,
             )
             findings.extend(found)
             results.append(

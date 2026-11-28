@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import base64
 import hashlib
+from dataclasses import replace
 
 from ..capture.models import ScriptRecord
 from ..errors import StoreError
 from ..findings import Finding
+from ..jsanalysis import analyze
 from .base import DetectionContext
 
 SRI_ALGORITHMS = ("sha256", "sha384", "sha512")
@@ -103,6 +105,7 @@ class ScriptsDetector:
                             },
                         )
                     )
+        findings = [self._enrich(ctx, f, after.get(f.subject)) for f in findings]
         for key, script in before.items():
             if key not in after:
                 findings.append(
@@ -116,6 +119,28 @@ class ScriptsDetector:
                     )
                 )
         return findings
+
+    @staticmethod
+    def _enrich(ctx: DetectionContext, finding: Finding, script: ScriptRecord | None) -> Finding:
+        """Add the static risk score and the inventory approval state of the script."""
+        if script is None or finding.change_type not in {"added", "inline_added", "hash_changed"}:
+            return finding
+        attributes = dict(finding.attributes)
+        evidence = dict(finding.evidence)
+        if ctx.inventory is not None:
+            entry = ctx.inventory.match(script)
+            attributes["approved"] = bool(entry and entry.approved)
+            attributes["approved_dynamic"] = bool(entry and entry.approved and not entry.pinned)
+        if script.sha256 is not None:
+            try:
+                body: bytes | None = ctx.store.get_blob(script.sha256)
+            except StoreError:
+                body = None
+            if body is not None:
+                risk = analyze(body)
+                attributes["risk_score"] = risk.score
+                evidence["static_analysis"] = risk.to_dict()
+        return replace(finding, attributes=attributes, evidence=evidence)
 
     def _added(self, script: ScriptRecord, cross: bool, in_main: bool) -> Finding:
         initiator = script.initiator

@@ -18,6 +18,7 @@ from blink_visual.capture.models import (
 )
 from blink_visual.config import TargetConfig
 from blink_visual.detect import DetectionContext
+from blink_visual.inventory import Inventory
 from blink_visual.store import Store
 
 PAGE = "https://shop.example/checkout"
@@ -87,6 +88,7 @@ def context(
     baseline: Snapshot,
     current: Snapshot,
     target: TargetConfig | None = None,
+    inventory: Inventory | None = None,
 ) -> DetectionContext:
     return DetectionContext(
         baseline=baseline,
@@ -94,6 +96,7 @@ def context(
         target=target or TargetConfig(name="checkout", url=PAGE, payment_region="#payment"),
         store=store,
         now=NOW,
+        inventory=inventory,
     )
 
 

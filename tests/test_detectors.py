@@ -479,7 +479,7 @@ def test_crashing_detector_becomes_a_finding(store):
 
 def test_registry_names_are_unique():
     names = [d.name for d in DETECTORS]
-    assert len(names) == len(set(names)) == 7
+    assert len(names) == len(set(names)) == 8
 
 
 def test_region_box_missing_does_not_crash(store):

@@ -7,18 +7,16 @@ cross-origin relative to the shop.
 from __future__ import annotations
 
 import base64
-import hashlib
 import secrets
 import threading
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from functools import cache
-from importlib.resources import files
 from string import Template
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, Response
 
+from .fixtures import INLINE_CONFIG, asset, sri
 from .scenarios import DEFAULT_SCENARIO, SCENARIOS
 
 PROMOS = (
@@ -26,7 +24,6 @@ PROMOS = (
     "Members save 10 percent today. Sign in at checkout.",
     "New notebooks in stock. Limited colours available.",
 )
-INLINE_CONFIG = 'window.SHOP_CONFIG = {"currency": "EUR", "locale": "en-GB"};'
 INJECTED_INLINE = (
     "/* LAB FIXTURE: inert injected inline script */ window.__blinkLabInjected = true;"
 )
@@ -39,16 +36,6 @@ OVERLAY = (
 )
 # A transparent 1x1 GIF.
 PIXEL = base64.b64decode("R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7")
-
-
-@cache
-def asset(name: str) -> str:
-    return (files("blink_visual.lab") / "assets" / name).read_text(encoding="utf-8")
-
-
-def sri(content: str, algorithm: str = "sha384") -> str:
-    digest = hashlib.new(algorithm, content.encode("utf-8")).digest()
-    return f"{algorithm}-{base64.b64encode(digest).decode('ascii')}"
 
 
 @dataclass

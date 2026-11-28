@@ -27,6 +27,8 @@ dependencies = [
     "PyYAML>=6,<7",
     "beautifulsoup4>=4.12,<5",
     "cryptography>=43",
+    "tree-sitter>=0.23,<1",
+    "tree-sitter-javascript>=0.23,<1",
 ]
 
 [project.urls]
@@ -113,6 +115,10 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S", "B", "PT006", "PT007"]
 "examples/**" = ["S", "E501", "B023"]
+# Developer scripts run fixed, local commands (npm).
+"scripts/**" = ["S603"]
+# JS pattern snippets read best on one line.
+"tests/test_jsanalysis.py" = ["S", "B", "PT006", "PT007", "E501"]
 "app.py" = ["S", "E501", "E741"]
 # 1.0 engine is API-stable; keep its source as shipped.
 "src/blink_visual/analysis.py" = ["B905"]

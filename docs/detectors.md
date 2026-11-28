@@ -1,6 +1,6 @@
 # Detectors, findings and rules
 
-`blink scan` captures each target/profile, loads its baseline snapshot and runs seven
+`blink scan` captures each target/profile, loads its baseline snapshot and runs eight
 detectors. Each detector reports *findings* (what changed, with evidence); the rule engine
 then assigns a severity (`info < low < medium < high < critical`) and a "why it matters"
 explanation. `--fail-on SEVERITY` (default `high`) sets the exit-code gate.
@@ -23,6 +23,8 @@ explanation. `--fail-on SEVERITY` (default `high`) sets the exit-code gate.
 | `dom` | `region_changed`, `region_missing` | A tree-edit summary of the normalized payment region: elements added, removed, attribute and text changes, and "sensitive" additions (script, iframe, form, input, object, embed). |
 | `visual` | `region_changed` | The Blink 1.0 engine (`analyze_pixels`) on the masked payment-region screenshots, with the `visual:` threshold and minimum region size from `blink.yaml`. Evidence includes the 1.0 overlay and heatmap. Different sizes are compared on their overlap and flagged `resized`. |
 | `tls` | `issuer_changed`, `certificate_changed`, `untrusted`, `expiring`, `tls_error` | HTTPS targets only. Expiry warns under 14 days. |
+
+| `inventory` | `unapproved`, `hash_mismatch` | Policy check against `blink.inventory.yaml` on every scan (see [inventory.md](inventory.md)). New, added and changed scripts also get a static `risk_score` (0–100). |
 
 A detector that crashes produces a `blink.detector_failed` finding instead of hiding changes.
 

@@ -535,12 +535,23 @@ class Capturer:
                 warnings.append(f"script {url} exceeds {MAX_SCRIPT_BYTES} bytes; hash only")
             return body, response.status
 
+        def keep(body: bytes, label: str) -> str | None:
+            """Store a script body; on hosts whose antivirus blocks the file, keep the hash only."""
+            try:
+                return store.put_blob(body, "text/javascript")
+            except OSError as exc:
+                warnings.append(
+                    f"could not store the body of {label} ({exc.strerror or exc}); an antivirus "
+                    "may have blocked it, which itself suggests malicious code; hash only"
+                )
+                return None
+
         def external(url: str, frame_url: str, attrs: dict[str, Any], in_dom: bool) -> None:
             body, status = body_of(url)
             digest = None
             if body is not None:
                 digest = (
-                    store.put_blob(body, "text/javascript")
+                    keep(body, url)
                     if len(body) <= MAX_SCRIPT_BYTES
                     else hashlib.sha256(body).hexdigest()
                 )
@@ -576,7 +587,7 @@ class Capturer:
                     inline=True,
                     frame_url=frame_url,
                     sha384=_sri(body),
-                    sha256=store.put_blob(body, "text/javascript"),
+                    sha256=keep(body, f"an inline script in {frame_url}"),
                     size=len(body),
                     type=item.get("type"),
                     initiator=Initiator(type="parser", url=frame_url),

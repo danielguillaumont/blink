@@ -39,3 +39,17 @@ Status of each phase in [`BUILD_PLAN.md`](../BUILD_PLAN.md). One branch and one 
 - **Known gaps:** with several CSP policies in one response the first definition of each
   directive is used; the DOM detector reports a moved element as a removal plus an addition.
   Unapproved-script findings arrive with the inventory in Phase 3.
+
+## Phase 3: Script inventory and static JS risk
+
+- **Date:** 2026-11-27
+- **PR:** #8
+- **Delivered:** `blink.inventory.yaml` model with approvals; `blink inventory` (`--sync`,
+  `--check`, `--json`), `blink approve` and `blink suggest-csp`; an inventory detector
+  (`unapproved` on every scan, `hash_mismatch` critical for pinned scripts); tree-sitter static
+  JS risk heuristics (0–100 score with explained factors) attached to new and changed scripts;
+  an npm-fetched corpus check that jQuery and React production builds score < 30.
+- **Known gaps:** the risk score is a triage aid that a careful attacker can evade; integrity
+  pinning is the control. `suggest-csp` cannot derive origins for entries matched only by
+  `url_pattern` (it says so in a note). On hosts whose antivirus blocks writing a skimmer-like
+  script, only its hash is kept and no risk score is computed (a warning is recorded).
