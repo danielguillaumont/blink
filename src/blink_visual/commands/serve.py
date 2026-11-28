@@ -31,7 +31,6 @@ def add_parser(subparsers: Any, common: argparse.ArgumentParser) -> None:
 def run_serve(args: argparse.Namespace) -> int:
     try:
         import fastapi  # noqa: F401
-        import jinja2  # noqa: F401
         import uvicorn  # noqa: F401
     except ImportError:
         raise MissingExtraError("server", "blink serve") from None

@@ -27,6 +27,7 @@ dependencies = [
     "PyYAML>=6,<7",
     "beautifulsoup4>=4.12,<5",
     "cryptography>=43",
+    "jinja2>=3.1,<4",
     "tree-sitter>=0.23,<1",
     "tree-sitter-javascript>=0.23,<1",
 ]
@@ -46,7 +47,6 @@ server = [
     "fastapi>=0.115,<1",
     "uvicorn>=0.30,<1",
     "python-multipart>=0.0.18",
-    "jinja2>=3.1,<4",
     "apscheduler>=3.10,<4",
     "prometheus-client>=0.20,<1",
     "structlog>=24",
@@ -83,6 +83,7 @@ where = ["src"]
 blink_visual = [
     "lab/assets/*",
     "rules/*.yaml",
+    "report/templates/*.html",
     "server/templates/*.html",
     "server/static/*",
     "py.typed",
