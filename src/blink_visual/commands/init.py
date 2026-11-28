@@ -8,6 +8,7 @@ from typing import Any
 
 import yaml
 
+from ..apitoken import ensure_token
 from ..config import CONFIG_FILENAME, parse_config
 from ..errors import BlinkError
 from ..project import Project
@@ -105,6 +106,9 @@ def run(args: argparse.Namespace) -> int:
         created.append(str(project.store_dir))
     key, public = generate_key(project.store_dir)
     created.append(f"{key} (ledger signing key, keep private; never commit it)")
+    token, made = ensure_token(project.store_dir)
+    if made:
+        created.append(f"{token} (dashboard/API token for `blink serve`; keep private)")
     if ensure_gitignore(project.root):
         created.append(f"{project.root / '.gitignore'} (added {GITIGNORE_ENTRY})")
     print("Created:")
