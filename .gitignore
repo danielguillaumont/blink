@@ -32,3 +32,6 @@ blink.token
 # Test/benchmark caches
 .cache/
 tests/.cache/
+# Docker demo smoke output and generated reports
+demo-smoke-logs.txt
+blink-report/
