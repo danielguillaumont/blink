@@ -26,10 +26,14 @@ blink scan --fail-on high        # findings with severity and "why it matters"; 
 blink inventory --sync           # PCI DSS 6.4.3 script inventory in blink.inventory.yaml
 blink approve SCRIPT_ID --justification "..." --owner web-team
 blink suggest-csp lab-checkout   # minimal CSP + SRI from the approved inventory
+blink daemon --metrics-port 9464 # scheduled scans, missed-run detection, alert sinks
+blink alerts ack ALERT_ID --by alice
+blink verify-ledger              # tamper-evident, ed25519-signed run history
 ```
 
 Detectors, rules and the findings JSON schema are documented in [`docs/detectors.md`](docs/detectors.md);
-the inventory, approvals and static JS risk score in [`docs/inventory.md`](docs/inventory.md).
+the inventory, approvals and static JS risk score in [`docs/inventory.md`](docs/inventory.md);
+the daemon, alerts, sinks, ledger and metrics in [`docs/operations.md`](docs/operations.md).
 
 `blink compare` keeps its 1.0 behaviour, pinned by a byte-for-byte golden test.
 

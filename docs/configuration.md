@@ -45,7 +45,9 @@ targets:
       min_change_percent: 0.05   # ignore changes below this share of the region
 ```
 
-See [detectors.md](detectors.md) for what each detector reports and how rules grade it.
+See [detectors.md](detectors.md) for what each detector reports and how rules grade it, and
+[operations.md](operations.md) for the top-level `schedule:` and `alerts:` sections (and the
+per-target `schedule:` override).
 
 ## Built-in profiles
 
