@@ -38,7 +38,7 @@ OVERLAY = (
 # Lab-only credentials for /staging/checkout (not secrets: they protect nothing real).
 LAB_BASIC_USER = "lab"
 LAB_BASIC_PASSWORD = "lab-staging-pass"  # nosec B105
-LAB_TOKEN_HEADER = "X-Lab-Token"
+LAB_TOKEN_HEADER = "X-Lab-Token"  # nosec B105
 LAB_TOKEN = "lab-staging-token"  # nosec B105
 AUTH_HEADERS = ("authorization", LAB_TOKEN_HEADER.lower())
 # A transparent 1x1 GIF.

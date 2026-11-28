@@ -85,7 +85,9 @@ def chromium_path() -> str | None:
 
 
 def check_chromium(locate: Callable[[], str | None] | None = None) -> Check:
-    fix = "python -m playwright install chromium   (Linux: add --with-deps)"
+    # sys.executable is the interpreter Blink runs in (pipx, venv or system), so this command
+    # installs Chromium where Blink's Playwright will look for it.
+    fix = f'"{sys.executable}" -m playwright install chromium   (Linux: add --with-deps)'
     if locate is None:
         if not _has("playwright"):
             return Check("chromium", WARN, "Playwright is not installed", fix)
