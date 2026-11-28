@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="csrf-token" content="${csrf}">
+<title>Blink Lab Shop - Checkout</title>
+<link rel="stylesheet" href="/static/${stylesheet}">
+<script>${inline_config}</script>
+<script src="/static/app.js" defer></script>
+<script src="${cdn}/lib/widget.js" integrity="${widget_integrity}" crossorigin="anonymous" defer></script>
+${extra_head}
+</head>
+<body data-render-id="${render_id}">
+<header class="site-header"><span class="brand">Blink Lab Shop</span><span class="timestamp">Rendered ${timestamp}</span></header>
+<div class="promo">${promo}</div>
+<main>
+<section class="summary">
+<h2>Order summary</h2>
+<div class="line"><span>Lab notebook</span><span>EUR 30.00</span></div>
+<div class="line"><span>Shipping</span><span>EUR 12.00</span></div>
+<div class="line" id="order-total"><strong>Total</strong><strong>EUR 42.00</strong></div>
+</section>
+<section id="payment" class="payment">
+<h2>Payment</h2>
+<form id="checkout-form" action="${form_action}" method="post" autocomplete="on">
+<input type="hidden" name="csrf_token" value="${csrf}">
+<label>Name on card<input name="cc-name" autocomplete="cc-name" placeholder="A. Tester"></label>
+<label>Card number<input name="cardnumber" autocomplete="cc-number" inputmode="numeric" placeholder="4242 4242 4242 4242"></label>
+<div class="row">
+<label>Expiry<input name="exp-date" autocomplete="cc-exp" placeholder="12/34"></label>
+<label>CVC<input name="cvc" autocomplete="cc-csc" inputmode="numeric" placeholder="123"></label>
+</div>
+<button class="pay-button" type="submit">Pay EUR 42.00</button>
+</form>
+<div id="trust-badge"></div>
+${payment_extra}
+</section>
+</main>
+<footer>Blink lab - a local test fixture. No payments are processed and no data is stored. Test card numbers only.</footer>
+${body_extra}
+</body>
+</html>
