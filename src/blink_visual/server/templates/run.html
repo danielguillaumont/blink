@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Run {{ run.id }}{% endblock %}
+{% block content %}
+<h1>Run <code>{{ run.id }}</code></h1>
+<p class="muted">{{ run.kind }} · {{ run.started_at }} → {{ run.finished_at }} · {{ run.status }}
+  {% if run.max_severity %}· <span class="badge {{ run.max_severity }}">{{ run.max_severity }}</span>{% endif %}</p>
+{% if results %}
+<table>
+  <thead><tr><th>Target</th><th>Profile</th><th>Status</th><th>Baseline</th><th>Current</th></tr></thead>
+  <tbody>
+  {% for r in results %}
+    <tr><td>{{ r.target }}</td><td>{{ r.profile }}</td><td>{{ r.status }}{% if r.error %}<br><span class="muted">{{ r.error }}</span>{% endif %}</td>
+      <td><code>{{ r.baseline_snapshot or '' }}</code></td><td><code>{{ r.current_snapshot or '' }}</code></td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+<h2>Findings ({{ findings|length }})</h2>
+{% if not findings %}<p class="empty">No findings in this run.</p>{% endif %}
+<ul class="findings">
+{% for f in findings %}
+  <li class="finding">
+    <span class="badge {{ f.severity }}">{{ f.severity }}</span>
+    <a class="finding-link" href="/findings/{{ run.id }}/{{ f.id }}">{{ f.title }}</a>
+    <span class="muted"><code>{{ f.detector }}.{{ f.change_type }}</code> · {{ f.target }} [{{ f.profile }}]</span>
+  </li>
+{% endfor %}
+</ul>
+{% endblock %}

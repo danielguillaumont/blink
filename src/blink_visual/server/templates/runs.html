@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Runs{% endblock %}
+{% block content %}
+<h1>Run timeline</h1>
+{% if not runs %}<p class="empty">No runs yet. Run <code>blink scan</code> or start <code>blink daemon</code>.</p>{% endif %}
+<table class="timeline">
+  <thead><tr><th>Finished</th><th>Kind</th><th>Status</th><th>Max severity</th><th>Findings</th><th>Run</th></tr></thead>
+  <tbody>
+  {% for r in runs %}
+    <tr>
+      <td>{{ r.finished_at }}</td>
+      <td>{{ r.kind }}</td>
+      <td>{{ r.status }}</td>
+      <td>{% if r.max_severity %}<span class="badge {{ r.max_severity }}">{{ r.max_severity }}</span>{% else %}<span class="badge ok">clean</span>{% endif %}</td>
+      <td>{% for sev, n in r.findings.items() %}<span class="badge {{ sev }}">{{ n }} {{ sev }}</span> {% endfor %}</td>
+      <td><a href="/runs/{{ r.id }}"><code>{{ r.id }}</code></a></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

@@ -94,7 +94,7 @@ def reference_snapshot(store: Store, target: str, profile: str) -> Snapshot | No
     return store.load_snapshot(snapshot_id) if snapshot_id else None
 
 
-def _collect(
+def collect_scripts(
     project: Project, store: Store, names: list[str], profiles: list[str] | None
 ) -> list[tuple[ScriptRecord, str, str]]:
     """(script, page url, where) for every distinct script across the reference snapshots."""
@@ -135,7 +135,7 @@ def run_inventory(args: argparse.Namespace) -> int:
     rows: list[dict[str, Any]] = []
     added = 0
     with project.open_store() as store:
-        scripts = _collect(project, store, args.targets, args.profiles)
+        scripts = collect_scripts(project, store, args.targets, args.profiles)
         for script, page, where in scripts:
             entry = inventory.match(script)
             if entry is None and args.sync:
@@ -191,14 +191,22 @@ def _print_rows(rows: list[dict[str, Any]], *, scripts_found: bool) -> None:
             print(f"             {row['owner']}: {row['justification'][:90]}")
 
 
-def run_approve(args: argparse.Namespace) -> int:
-    project = Project.load(args.config)
+def approve_entries(
+    project: Project,
+    ids: list[str],
+    *,
+    justification: str,
+    owner: str,
+    approved_by: str,
+    dynamic: bool = False,
+    notes: str | None = None,
+) -> list[InventoryEntry]:
+    """Approve inventory ids (adding scripts seen in snapshots), save and ledger them."""
     inventory = _load(project)
-    approved_by = args.approved_by if args.approved_by is not None else getpass.getuser()
     pending: list[InventoryEntry] = []
     unknown: list[str] = []
     discovered: dict[str, InventoryEntry] | None = None
-    for entry_id in args.ids:
+    for entry_id in ids:
         entry = inventory.get(entry_id)
         if entry is None:
             if discovered is None:
@@ -210,11 +218,11 @@ def run_approve(args: argparse.Namespace) -> int:
         pending.append(
             approve(
                 entry,
-                justification=args.justification,
-                owner=args.owner,
+                justification=justification,
+                owner=owner,
                 approved_by=approved_by,
-                dynamic=args.dynamic,
-                notes=args.notes,
+                dynamic=dynamic,
+                notes=notes,
             )
         )
     if unknown:
@@ -240,8 +248,24 @@ def run_approve(args: argparse.Namespace) -> int:
                 },
                 at=entry.approved_at or "",
             )
-            pin = "content hash not pinned" if not entry.pinned else "content hash pinned"
-            print(f"Approved {entry.id} ({pin}) by {entry.approved_by} at {entry.approved_at}")
+    return pending
+
+
+def run_approve(args: argparse.Namespace) -> int:
+    project = Project.load(args.config)
+    approved_by = args.approved_by if args.approved_by is not None else getpass.getuser()
+    entries = approve_entries(
+        project,
+        args.ids,
+        justification=args.justification,
+        owner=args.owner,
+        approved_by=approved_by,
+        dynamic=args.dynamic,
+        notes=args.notes,
+    )
+    for entry in entries:
+        pin = "content hash not pinned" if not entry.pinned else "content hash pinned"
+        print(f"Approved {entry.id} ({pin}) by {entry.approved_by} at {entry.approved_at}")
     return 0
 
 
@@ -250,7 +274,7 @@ def _discover(project: Project) -> dict[str, InventoryEntry]:
     if not project.config.targets:
         return found
     with project.open_store() as store:
-        for script, page, _ in _collect(project, store, [], None):
+        for script, page, _ in collect_scripts(project, store, [], None):
             entry = entry_for(script, page)
             found.setdefault(entry.id, entry)
     return found

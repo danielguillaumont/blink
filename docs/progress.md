@@ -68,3 +68,18 @@ Status of each phase in [`BUILD_PLAN.md`](../BUILD_PLAN.md). One branch and one 
   key and write access to the store could rewrite history; pin the public key outside the host
   and keep exported reports (Phase 6). The Microsoft Sentinel sink (`[sentinel]` extra) is a
   later, optional phase. The 0600 key-mode test is skipped on Windows (runs on Linux CI).
+
+## Phase 5: Dashboard and API
+
+- **Date:** 2026-11-27
+- **PR:** #10
+- **Delivered:** `blink serve` (FastAPI + Jinja2 + vendored htmx, no build step): Targets, Run
+  timeline, Finding detail (screenshots with overlay/heatmap, script diff, static-analysis
+  factors, header diff, HAR excerpt), Inventory with inline approval, Alerts (ack, resolve,
+  accept change, reopen) and read-only Settings; JSON API with OpenAPI at `/docs`; `/healthz`
+  and `/metrics`. Loopback bind by default (login required otherwise), bearer token for every
+  non-GET (created by `blink init`), double-submit CSRF, strict CSP and the full header set;
+  Blink passes its own header checks (dogfood scan test). Playwright e2e for approving a
+  script, acknowledging an alert and opening a finding.
+- **Known gaps:** `/docs` loads Swagger UI from jsDelivr (SRI-pinned), so it needs internet
+  access. Browser e2e tests are skipped on the Windows CI leg, as in earlier phases.

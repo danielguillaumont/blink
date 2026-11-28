@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Log in{% endblock %}
+{% block content %}
+<h1>Log in</h1>
+<p class="muted">Enter the API token from <code>.blink/blink.token</code> (or <code>$BLINK_TOKEN</code>).</p>
+{% if failed %}<p class="error">That token is not valid.</p>{% endif %}
+<form id="login-form" method="post" action="/login" hx-boost="false" class="card login">
+  <input type="hidden" name="csrf_token" value="{{ csrf }}">
+  <label for="login-token">API token</label>
+  <input id="login-token" name="token" type="password" required autocomplete="current-password">
+  <button type="submit">Log in</button>
+</form>
+{% endblock %}

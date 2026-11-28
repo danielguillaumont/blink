@@ -1,0 +1,20 @@
+<tr id="alert-{{ alert.id }}" class="alert-row">
+  <td><span class="badge {{ alert.severity }}">{{ alert.severity }}</span></td>
+  <td><a href="/findings/{{ alert.last_run_id }}/{{ alert.id }}">{{ alert.title }}</a><br>
+    <span class="muted"><code>{{ alert.detector }}.{{ alert.change_type }}</code> · {{ alert.target }} [{{ alert.profile }}] · <code>{{ alert.id }}</code></span></td>
+  <td>{{ alert.occurrences }}× <span class="muted">since {{ alert.first_seen_at }}</span></td>
+  <td><span class="state">{{ alert.state }}</span>{% if alert.updated_by != 'blink' %}<br><span class="muted">by {{ alert.updated_by }}{% if alert.note %}: {{ alert.note }}{% endif %}</span>{% endif %}</td>
+  <td>
+    <form class="alert-form" hx-target="closest tr" hx-swap="outerHTML">
+      <input name="by" placeholder="Your name" required aria-label="Your name">
+      <input name="note" placeholder="Note (required to accept)" aria-label="Note">
+      {% if alert.state == 'open' %}<button type="submit" hx-post="/api/alerts/{{ alert.id }}/ack">Acknowledge</button>{% endif %}
+      {% if alert.state in ('open', 'acknowledged') %}
+      <button type="submit" hx-post="/api/alerts/{{ alert.id }}/resolve">Resolve</button>
+      <button type="submit" class="secondary" hx-post="/api/alerts/{{ alert.id }}/accept">Accept change</button>
+      {% else %}
+      <button type="submit" class="secondary" hx-post="/api/alerts/{{ alert.id }}/reopen">Reopen</button>
+      {% endif %}
+    </form>
+  </td>
+</tr>

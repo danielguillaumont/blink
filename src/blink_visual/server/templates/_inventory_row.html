@@ -1,0 +1,23 @@
+<tr id="inv-{{ row.id }}" class="inventory-row">
+  <td><code>{{ row.id }}</code><br><span class="muted">{{ row.url or row.inline_sha384 or '' }}</span></td>
+  <td>{{ row.type }}</td>
+  <td>
+    {% if row.approved and row.hash_matches %}<span class="badge ok state">approved</span>
+    {% elif row.approved %}<span class="badge critical state">hash changed</span>
+    {% elif row.listed %}<span class="badge high state">unapproved</span>
+    {% else %}<span class="badge high state">unlisted</span>{% endif %}
+    {% if row.approved %}<br><span class="muted">{{ 'pinned' if row.pinned else 'dynamic' }} · {{ row.approved_by }} · {{ row.approved_at }}</span>{% endif %}
+  </td>
+  <td>{% if row.justification %}{{ row.justification }}<br><span class="muted">{{ row.owner }}</span>{% endif %}</td>
+  <td>
+    {% if not row.approved %}
+    <form class="approve-form" hx-post="/api/inventory/{{ row.id }}/approve" hx-target="closest tr" hx-swap="outerHTML">
+      <input name="justification" placeholder="Justification" required aria-label="Justification for {{ row.id }}">
+      <input name="owner" placeholder="Owner" required aria-label="Owner of {{ row.id }}">
+      <input name="approved_by" placeholder="Your name" required aria-label="Approved by">
+      <label class="inline"><input type="checkbox" name="dynamic" value="true"> dynamic</label>
+      <button type="submit">Approve</button>
+    </form>
+    {% endif %}
+  </td>
+</tr>
