@@ -60,6 +60,13 @@ jobs:
         if: runner.os == 'Windows'
         shell: bash
         run: echo "BLINK_SKIP_BROWSER=1" >> "$GITHUB_ENV"
+      - name: Cache JS corpus
+        uses: actions/cache@v4
+        with:
+          path: tests/.cache/js-corpus
+          key: js-corpus-${{ hashFiles('scripts/fetch_js_corpus.py') }}
+      - name: Fetch real-world JS corpus (npm)
+        run: python scripts/fetch_js_corpus.py
       - run: python -m pytest -q --cov=src/blink_visual --cov-report=term-missing
       - run: python examples/smoke.py
       - run: python examples/scientific_smoke.py
