@@ -41,6 +41,9 @@ jobs:
       - name: Install the wheel with every runtime extra
         run: |
           python -m venv /tmp/release-env
+          # The venv's bundled pip is older than the current release and has known advisories;
+          # upgrade it so the SBOM and audit describe the environment users actually get.
+          /tmp/release-env/bin/python -m pip install --disable-pip-version-check --upgrade pip
           /tmp/release-env/bin/pip install --disable-pip-version-check "$(ls dist/*.whl)[capture,server]"
           /tmp/release-env/bin/blink --version
       - name: CycloneDX SBOM
