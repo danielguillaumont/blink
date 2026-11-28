@@ -147,3 +147,19 @@ def test_scanning_blink_serve_reports_no_header_findings(dashboard, tmp_path, ca
     assert report["targets"][0]["status"] == "ok"
     headers = [f for f in report["findings"] if f["detector"] == "headers"]
     assert headers == [], headers
+
+
+def test_swagger_docs_render_offline(dashboard, page):
+    """Vendored Swagger UI renders under the docs CSP and makes no request off the host."""
+    server, _token, _project = dashboard
+    external: list[str] = []
+    page.on(
+        "request",
+        lambda req: external.append(req.url) if not req.url.startswith(server.url) else None,
+    )
+    page.goto(f"{server.url}/docs")
+    page.wait_for_selector(".swagger-ui .info .title", timeout=15000)
+    assert "Blink" in page.inner_text(".swagger-ui .info .title")
+    page.wait_for_selector("#operations-read-api_targets_api_targets_get")
+    assert external == []
+    assert page.csp_violations == []  # type: ignore[attr-defined]

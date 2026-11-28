@@ -16,3 +16,6 @@ tests/golden/** -text
 *.sh text eol=lf
 Dockerfile text eol=lf
 docker/* text eol=lf
+# Vendored files are pinned by SRI hash; never convert their bytes.
+src/blink_visual/server/static/swagger-ui* -text linguist-vendored
+src/blink_visual/server/static/htmx* -text linguist-vendored
