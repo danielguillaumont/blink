@@ -24,6 +24,7 @@ from . import views
 from .security import SESSION_COOKIE, Guard, csrf_token, security_middleware
 
 ACTIONS = {"ack": ACKNOWLEDGED, "resolve": RESOLVED, "accept": ACCEPTED, "reopen": OPEN}
+# Vendored in server/static (Apache-2.0, see swagger-ui.LICENSE.txt); the hashes pin those bytes.
 SWAGGER_VERSION = "5.17.14"
 SWAGGER_JS_SRI = "sha384-wmyclcVGX/WhUkdkATwhaK1X1JtiNrr2EoYJ+diV3vj4v6OC5yCeSu+yW13SYJep"
 SWAGGER_CSS_SRI = "sha384-wxLW6kwyHktdDGr6Pv1zgm/VGJh99lfUbzSn6HNHBENZlCN7W602k9VkGdxuFvPn"

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 120" role="img" aria-labelledby="title">
+  <title id="title">Blink. See what changed.</title>
+  <rect width="360" height="120" rx="14" fill="#141414"/>
+  <path d="M18 49 Q48 10 78 49 Q48 88 18 49Z" fill="none" stroke="#F4F4F2" stroke-width="3.2"/>
+  <circle cx="48" cy="49" r="12" fill="#C6F65C"/>
+  <path d="M48 20V78" stroke="#141414" stroke-width="3"/>
+  <text x="96" y="70" font-family="Arial, Helvetica, sans-serif" font-size="70" font-weight="800" letter-spacing="-4" fill="#F4F4F2">blink<tspan fill="#C6F65C">.</tspan></text>
+  <text x="99" y="96" font-family="Arial, Helvetica, sans-serif" font-size="13" letter-spacing="2" fill="#BDBDBD">SEE WHAT CHANGED.</text>
+</svg>

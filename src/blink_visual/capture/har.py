@@ -7,6 +7,7 @@ request bodies are removed. Only names, URLs, methods, statuses and timings rema
 from __future__ import annotations
 
 import json
+from collections.abc import Collection
 from typing import Any
 
 REDACTED = "[redacted]"
@@ -24,11 +25,17 @@ SENSITIVE_HEADERS = frozenset(
 )
 
 
-def _scrub_headers(headers: Any) -> None:
+def _scrub_headers(headers: Any, names: Collection[str] = (), values: Collection[str] = ()) -> None:
     if not isinstance(headers, list):
         return
+    sensitive = SENSITIVE_HEADERS | {n.lower() for n in names}
     for header in headers:
-        if isinstance(header, dict) and str(header.get("name", "")).lower() in SENSITIVE_HEADERS:
+        if not isinstance(header, dict):
+            continue
+        value = str(header.get("value", ""))
+        if str(header.get("name", "")).lower() in sensitive or any(
+            secret in value for secret in values
+        ):
             header["value"] = REDACTED
 
 
@@ -40,8 +47,14 @@ def _scrub_cookies(message: dict[str, Any]) -> None:
         ]
 
 
-def scrub_har(har: dict[str, Any]) -> dict[str, Any]:
-    """Scrub ``har`` in place and return it."""
+def scrub_har(
+    har: dict[str, Any], *, names: Collection[str] = (), values: Collection[str] = ()
+) -> dict[str, Any]:
+    """Scrub ``har`` in place and return it.
+
+    ``names`` are extra header names to redact (a target's auth header); any header whose value
+    contains one of ``values`` (resolved secrets) is redacted too.
+    """
     entries = har.get("log", {}).get("entries", [])
     for entry in entries if isinstance(entries, list) else []:
         if not isinstance(entry, dict):
@@ -50,7 +63,7 @@ def scrub_har(har: dict[str, Any]) -> dict[str, Any]:
             message = entry.get(role)
             if not isinstance(message, dict):
                 continue
-            _scrub_headers(message.get("headers"))
+            _scrub_headers(message.get("headers"), names, values)
             _scrub_cookies(message)
         request = entry.get("request")
         if isinstance(request, dict) and "postData" in request:
@@ -63,6 +76,9 @@ def scrub_har(har: dict[str, Any]) -> dict[str, Any]:
     return har
 
 
-def scrub_har_bytes(data: bytes) -> bytes:
+def scrub_har_bytes(
+    data: bytes, *, names: Collection[str] = (), values: Collection[str] = ()
+) -> bytes:
     har = json.loads(data.decode("utf-8"))
-    return json.dumps(scrub_har(har), indent=1, sort_keys=True).encode("utf-8")
+    scrubbed = scrub_har(har, names=names, values=values)
+    return json.dumps(scrubbed, indent=1, sort_keys=True).encode("utf-8")

@@ -3,11 +3,11 @@
 import argparse
 import math
 import sys
-from importlib.metadata import version
 from pathlib import Path
 
 from PIL import Image
 
+from ._meta import dist_version
 from .analysis import analyze_pixels
 from .render import difference_overlay, heatmap
 from .workspace import MAX_BYTES, decode_upload, png_bytes, report_bytes
@@ -34,7 +34,7 @@ def percentage(value):
 
 def parser():
     root = argparse.ArgumentParser(prog="blink", description="Blink. See what changed.")
-    root.add_argument("--version", action="version", version=f"blink {version('blink-visual')}")
+    root.add_argument("--version", action="version", version=f"blink {dist_version()}")
     commands = root.add_subparsers(dest="command", required=True)
     compare = commands.add_parser("compare", help="Compare two equal-sized PNG/JPEG images")
     compare.add_argument("before", type=Path, help="Original image")

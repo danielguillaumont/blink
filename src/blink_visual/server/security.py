@@ -36,9 +36,9 @@ CSP = (
     "connect-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'; "
     "object-src 'none'"
 )
-SWAGGER_CDN = "https://cdn.jsdelivr.net"
+# Swagger UI is vendored under /static (no CDN); it only needs data: images on top of CSP.
 DOCS_CSP = (
-    f"default-src 'none'; script-src 'self' {SWAGGER_CDN}; style-src 'self' {SWAGGER_CDN}; "
+    "default-src 'none'; script-src 'self'; style-src 'self'; "
     "img-src 'self' data:; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; "
     "base-uri 'none'; object-src 'none'"
 )

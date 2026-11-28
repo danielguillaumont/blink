@@ -46,5 +46,5 @@ class MissingExtraError(BlinkError):
     def __init__(self, extra: str, feature: str) -> None:
         super().__init__(
             f"{feature} needs the optional '{extra}' dependencies.",
-            hint=f'install them with: python -m pip install "blink-visual[{extra}]"',
+            hint=f'install them with: python -m pip install "blink-checkout[{extra}]"',
         )

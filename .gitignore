@@ -35,3 +35,4 @@ tests/.cache/
 # Docker demo smoke output and generated reports
 demo-smoke-logs.txt
 blink-report/
+site/

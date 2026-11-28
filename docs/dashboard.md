@@ -1,7 +1,7 @@
 # Dashboard and API (`blink serve`)
 
 ```bash
-python -m pip install "blink-visual[server]"
+python -m pip install "blink-checkout[server]"
 blink serve                       # http://127.0.0.1:8765, API docs at /docs
 blink serve --port 9000
 ```
@@ -40,8 +40,8 @@ API under `/api/` (OpenAPI at `/openapi.json`, Swagger UI at `/docs`).
   DENY`, `nosniff`, `Referrer-Policy: no-referrer`, a restrictive `Permissions-Policy` and
   `Cache-Control: no-store`. There are no inline scripts or styles; htmx runs with `allowEval`
   off. Blink passes its own header detector (`tests/test_server_e2e.py`, the dogfood test).
-- `/docs` loads Swagger UI 5.17.14 from jsDelivr, pinned with SRI hashes under a CSP that
-  allows only that CDN, so it needs internet access. Everything else is served locally.
+- `/docs` serves Swagger UI 5.17.14 from `/static` (vendored, Apache-2.0), pinned with SRI
+  hashes. Nothing is loaded from a CDN, so the dashboard works fully offline.
 - Evidence is served only as PNG images. Captured scripts are never served (they could run
   under `script-src 'self'`); diffs are rendered as escaped text.
 

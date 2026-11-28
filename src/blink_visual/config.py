@@ -33,6 +33,65 @@ class Viewport(_Model):
     height: int = Field(ge=200, le=4000)
 
 
+EnvName = Annotated[str, Field(pattern=r"^[A-Za-z_][A-Za-z0-9_]{0,127}$")]
+HEADER_NAME = re.compile(r"^[A-Za-z0-9!#$%&'*+.^_`|~-]{1,128}$")
+
+
+class ProxyConfig(_Model):
+    """A per-target (or per-profile) browser proxy. Credentials come from environment variables."""
+
+    server: str = Field(min_length=1, max_length=500)
+    bypass: str | None = Field(default=None, max_length=2000)
+    username_env: EnvName | None = None
+    password_env: EnvName | None = None
+
+    @field_validator("server")
+    @classmethod
+    def _proxy_url(cls, value: str) -> str:
+        parts = urlsplit(value if "://" in value else f"http://{value}")
+        if parts.scheme not in {"http", "https", "socks5"} or not parts.hostname:
+            raise ValueError("proxy server must look like http://host:port")
+        if parts.username or parts.password:
+            raise ValueError("put proxy credentials in username_env / password_env, not the URL")
+        return f"{parts.scheme}://{parts.netloc}"
+
+    @model_validator(mode="after")
+    def _pair(self) -> ProxyConfig:
+        if (self.username_env is None) != (self.password_env is None):
+            raise ValueError("set both username_env and password_env, or neither")
+        return self
+
+
+class BasicAuth(_Model):
+    """HTTP basic auth, sent only to the target's own origin."""
+
+    type: Literal["basic"]
+    username_env: EnvName
+    password_env: EnvName
+
+
+class HeaderAuth(_Model):
+    """A header token (e.g. a staging bypass token), sent only to the target's own origin."""
+
+    type: Literal["header"]
+    header: str = "Authorization"
+    value_env: EnvName
+    prefix: str = Field(default="", max_length=50)
+    """Prepended to the value, e.g. ``"Bearer "``."""
+
+    @field_validator("header")
+    @classmethod
+    def _header_name(cls, value: str) -> str:
+        if not HEADER_NAME.match(value):
+            raise ValueError(f"not a valid HTTP header name: {value!r}")
+        if value.lower() in {"cookie", "host", "content-length"}:
+            raise ValueError(f"{value} cannot be used for auth")
+        return value
+
+
+AuthConfig = Annotated[BasicAuth | HeaderAuth, Field(discriminator="type")]
+
+
 class ProfileConfig(_Model):
     """A deterministic browser profile (viewport, UA, locale, timezone)."""
 
@@ -43,6 +102,8 @@ class ProfileConfig(_Model):
     device_scale_factor: float = Field(default=1.0, ge=1.0, le=4.0)
     locale: str = "en-US"
     timezone: str = "UTC"
+    proxy: ProxyConfig | None = None
+    """Optional per-profile proxy (e.g. a regional egress); wins over the target's proxy."""
 
 
 class VolatileAttribute(_Model):
@@ -241,6 +302,10 @@ class TargetConfig(_Model):
     visual: VisualConfig = Field(default_factory=VisualConfig)
     schedule: ScheduleConfig | None = None
     """Overrides fields of the top-level ``schedule``."""
+    proxy: ProxyConfig | None = None
+    """Overrides ``BLINK_PROXY`` for this target."""
+    auth: AuthConfig | None = None
+    """Credentials for a protected (e.g. staging) target, read from environment variables."""
 
     @field_validator("url")
     @classmethod

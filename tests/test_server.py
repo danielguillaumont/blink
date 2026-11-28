@@ -181,10 +181,27 @@ def test_docs_page_pins_swagger_with_sri(client):
     assert response.status_code == 200
     assert 'integrity="sha384-' in response.text
     assert "<script>" not in response.text  # no inline script
-    assert "https://cdn.jsdelivr.net" in response.headers["content-security-policy"]
+    assert "cdn" not in response.text
+    assert "https://" not in response.headers["content-security-policy"]
+    assert 'src="/static/swagger-ui-bundle.js' in response.text
     spec = client.get("/openapi.json").json()
     assert "/api/alerts/{alert_id}/{action}" in spec["paths"]
     assert "/api/inventory/{entry_id}/approve" in spec["paths"]
+
+
+def test_vendored_swagger_matches_its_sri(client):
+    """The pinned hashes are the SRI of the vendored bytes, so the browser will load them."""
+    import base64
+    import hashlib
+
+    from blink_visual.server import SWAGGER_CSS_SRI, SWAGGER_JS_SRI
+
+    for path, sri in (
+        ("/static/swagger-ui-bundle.js", SWAGGER_JS_SRI),
+        ("/static/swagger-ui.css", SWAGGER_CSS_SRI),
+    ):
+        body = client.get(path).content
+        assert sri == "sha384-" + base64.b64encode(hashlib.sha384(body).digest()).decode()
 
 
 def test_non_get_requires_bearer_token(api):

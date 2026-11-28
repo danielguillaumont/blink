@@ -1,0 +1,75 @@
+site_name: Blink
+site_description: Self-hosted payment page integrity monitor (PCI DSS 6.4.3 and 11.6.1)
+site_url: https://danielguillaumont.github.io/blink/
+repo_url: https://github.com/danielguillaumont/blink
+repo_name: danielguillaumont/blink
+edit_uri: edit/main/docs/
+copyright: MIT licensed
+
+theme:
+  name: material
+  logo: assets/icon.png
+  favicon: assets/icon.png
+  features:
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+    - search.highlight
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle: {icon: material/weather-night, name: Dark mode}
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle: {icon: material/weather-sunny, name: Light mode}
+
+# Strict mode (mkdocs build --strict) turns every warning, including a broken link, into an error.
+strict: true
+validation:
+  omitted_files: warn
+  absolute_links: warn
+  unrecognized_links: warn
+  anchors: warn
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+
+nav:
+  - Home: index.md
+  - Getting started:
+      - Install and first scan: getting-started.md
+      - Configuration: configuration.md
+      - The lab: lab.md
+  - Using Blink:
+      - Detectors: detectors.md
+      - Inventory (6.4.3): inventory.md
+      - Operations and scheduling: operations.md
+      - Dashboard and API: dashboard.md
+      - Audit report: report.md
+      - Sample signed report: sample-report.md
+      - Findings schema: findings-schema.md
+  - Runbooks:
+      - An alert fired: runbooks/alert-fired.md
+      - Rebaselining: runbooks/rebaselining.md
+      - Troubleshooting capture: runbooks/troubleshooting-capture.md
+  - Compliance and security:
+      - PCI DSS mapping: pci-mapping.md
+      - Threat model: threat-model.md
+  - Project:
+      - Releasing: releasing.md
+      - Roadmap: roadmap.md
+      - Progress: progress.md
+      - Decisions:
+          - 0001 Pivot to payment page integrity: adr/0001-pivot-to-payment-page-integrity.md
+          - 0002 The lab ships inside the package: adr/0002-lab-ships-inside-the-package.md
+          - 0003 Stdlib sinks and store-derived metrics: adr/0003-stdlib-sinks-and-store-derived-metrics.md
+          - 0004 Container topology: adr/0004-container-topology.md
+          - 0005 Distribution name blink-checkout: adr/0005-distribution-name-blink-checkout.md

@@ -85,3 +85,23 @@ jobs:
       - name: Container logs
         if: failure()
         run: cat demo-smoke-logs.txt || true
+
+  package:
+    name: Package (build, twine check, clean pipx install)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Build and check metadata
+        run: |
+          python -m pip install --disable-pip-version-check build twine
+          python -m build
+          python -m twine check --strict dist/*
+      - name: pipx install the wheel with [capture,server] in a clean environment
+        run: |
+          wheel=$(ls dist/blink_checkout-*.whl)
+          pipx install --python python3.12 "${wheel}[capture,server]"
+          blink --version
+          cd "$(mktemp -d)" && blink doctor --no-browser && blink init --lab && blink doctor --no-browser
