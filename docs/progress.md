@@ -27,3 +27,15 @@ Status of each phase in [`BUILD_PLAN.md`](../BUILD_PLAN.md). One branch and one 
   Windows). Scripts that are only `eval`'d (no URL, no DOM element) are not inventoried; dynamic
   script elements and scripts removed from the DOM after loading are. The lab sits in
   `src/blink_visual/lab/` rather than a top-level `lab/` (ADR 0002).
+
+## Phase 2: Baselines, detectors and findings
+
+- **Date:** 2026-11-27
+- **PR:** #7
+- **Delivered:** `blink baseline` and `blink scan` with `--fail-on`, `--json` and `--output`;
+  scripts, network, headers, forms, dom, visual and tls detectors; YAML severity rules with
+  project overrides; findings JSON schema v2 (`docs/schemas/findings-v2.schema.json`); runs and
+  findings persisted in SQLite; an end-to-end matrix over 12 scenarios × 2 profiles.
+- **Known gaps:** with several CSP policies in one response the first definition of each
+  directive is used; the DOM detector reports a moved element as a removal plus an addition.
+  Unapproved-script findings arrive with the inventory in Phase 3.
