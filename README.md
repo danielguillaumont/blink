@@ -30,12 +30,15 @@ blink daemon --metrics-port 9464 # scheduled scans, missed-run detection, alert 
 blink alerts ack ALERT_ID --by alice
 blink verify-ledger              # tamper-evident, ed25519-signed run history
 blink serve                      # dashboard + API on http://127.0.0.1:8765 (docs at /docs)
+blink report                     # signed audit evidence (HTML, PDF, report.json)
 ```
 
 Detectors, rules and the findings JSON schema are documented in [`docs/detectors.md`](docs/detectors.md);
 the inventory, approvals and static JS risk score in [`docs/inventory.md`](docs/inventory.md);
 the daemon, alerts, sinks, ledger and metrics in [`docs/operations.md`](docs/operations.md);
-the dashboard, API and its security model in [`docs/dashboard.md`](docs/dashboard.md).
+the dashboard, API and its security model in [`docs/dashboard.md`](docs/dashboard.md);
+the audit evidence report in [`docs/report.md`](docs/report.md), and how it maps to
+PCI DSS 6.4.3 / 11.6.1 in [`docs/pci-mapping.md`](docs/pci-mapping.md).
 
 `blink compare` keeps its 1.0 behaviour, pinned by a byte-for-byte golden test.
 
