@@ -1,9 +1,11 @@
 """Generate deterministic comparison evidence with a known ground truth."""
+
 import json
 from pathlib import Path
 
 import numpy as np
 from PIL import Image
+
 from blink_visual import analyze_pixels, difference_overlay, heatmap
 
 out = Path(__file__).resolve().parents[1] / "outputs" / "bl02"
@@ -24,8 +26,12 @@ Image.fromarray(a).save(out / "before.png")
 Image.fromarray(b).save(out / "after.png")
 difference_overlay(b, r).save(out / "overlay.png")
 heatmap(r).save(out / "heatmap.png")
-(out / "report.json").write_text(json.dumps(r.to_dict(), indent=2, allow_nan=False)+"\n", encoding="utf-8")
+(out / "report.json").write_text(
+    json.dumps(r.to_dict(), indent=2, allow_nan=False) + "\n", encoding="utf-8"
+)
 print("BLINK. | BL02 scientific smoke test")
-print(f"Changed: {r.pixels.changed_pixels}/{r.pixels.total_pixels} ({r.pixels.changed_percentage:.3f}%)")
+print(
+    f"Changed: {r.pixels.changed_pixels}/{r.pixels.total_pixels} ({r.pixels.changed_percentage:.3f}%)"
+)
 print(f"SSIM: {r.ssim:.6f}\nRegions: {r.total_regions}\nEvidence: {out}")
 print("PASS: scientific comparison evidence verified")

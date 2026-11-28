@@ -60,7 +60,15 @@ def test_mismatched_dimensions():
         compare_pixels(rgb(), rgb(5, 4))
 
 
-@pytest.mark.parametrize("bad", [np.zeros((2, 2)), np.zeros((2, 2, 4), dtype=np.uint8), np.zeros((0, 2, 3), dtype=np.uint8), np.zeros((2, 2, 3), dtype=np.float32)])
+@pytest.mark.parametrize(
+    "bad",
+    [
+        np.zeros((2, 2)),
+        np.zeros((2, 2, 4), dtype=np.uint8),
+        np.zeros((0, 2, 3), dtype=np.uint8),
+        np.zeros((2, 2, 3), dtype=np.float32),
+    ],
+)
 def test_invalid_arrays(bad):
     with pytest.raises(ValueError):
         compare_pixels(bad, rgb())
