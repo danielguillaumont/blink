@@ -9,22 +9,51 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  test:
-    name: Python 3.12 / ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest]
+  quality:
+    name: Lint, types, security
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
           cache: pip
-      - run: python -m pip install ".[dev,ui]"
-      - run: python -m pytest -q
+      - run: python -m pip install -e ".[dev]"
+      - name: ruff
+        run: ruff check . && ruff format --check .
+      - name: mypy (strict, new code)
+        run: mypy src/blink_visual --exclude 'src/blink_visual/(compare|analysis|render|workspace|cli)\.py'
+      - name: bandit
+        run: bandit -q -r src
+      - name: pip-audit
+        run: pip-audit
+
+  test:
+    name: Tests / Python ${{ matrix.python }} / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            python: '3.12'
+          - os: ubuntu-latest
+            python: '3.11'
+          - os: windows-latest
+            python: '3.12'
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+      - run: python -m pip install -e ".[dev,ui]"
+      - run: python -m pytest -q --cov=src/blink_visual --cov-report=term-missing
       - run: python examples/smoke.py
       - run: python examples/scientific_smoke.py
       - run: blink --version
