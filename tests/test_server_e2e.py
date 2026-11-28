@@ -124,7 +124,9 @@ def test_ui_open_a_finding(dashboard, page):
     assert page.locator("section.why p").first.text_content().strip()
     images = page.locator(".gallery img")
     if images.count():
-        assert page.evaluate("img => img.naturalWidth > 0", images.first.element_handle())
+        page.wait_for_function(
+            "img => img.complete && img.naturalWidth > 0", arg=images.first.element_handle()
+        )
     assert page.csp_violations == []
 
 
