@@ -86,6 +86,58 @@ MIGRATIONS: list[str] = [
     );
     CREATE INDEX findings_by_fingerprint ON findings(fingerprint);
     """,
+    # 3: tamper-evident ledger and alert state
+    """
+    CREATE TABLE ledger (
+        seq INTEGER PRIMARY KEY,
+        at TEXT NOT NULL,
+        kind TEXT NOT NULL,
+        payload TEXT NOT NULL,
+        prev_hash TEXT NOT NULL,
+        hash TEXT NOT NULL
+    );
+    CREATE TABLE ledger_head (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        seq INTEGER NOT NULL,
+        hash TEXT NOT NULL,
+        signature TEXT NOT NULL,
+        public_key TEXT NOT NULL,
+        signed_at TEXT NOT NULL
+    );
+    CREATE TABLE alerts (
+        fingerprint TEXT PRIMARY KEY,
+        id TEXT NOT NULL UNIQUE,
+        target TEXT NOT NULL,
+        profile TEXT NOT NULL,
+        detector TEXT NOT NULL,
+        change_type TEXT NOT NULL,
+        subject TEXT NOT NULL,
+        title TEXT NOT NULL,
+        why TEXT NOT NULL,
+        severity INTEGER NOT NULL,
+        state TEXT NOT NULL,
+        first_seen_at TEXT NOT NULL,
+        last_seen_at TEXT NOT NULL,
+        first_run_id TEXT NOT NULL,
+        last_run_id TEXT NOT NULL,
+        occurrences INTEGER NOT NULL,
+        updated_at TEXT NOT NULL,
+        updated_by TEXT NOT NULL DEFAULT '',
+        note TEXT NOT NULL DEFAULT ''
+    );
+    CREATE INDEX alerts_by_state ON alerts(state, severity);
+    CREATE TABLE alert_events (
+        id INTEGER PRIMARY KEY,
+        fingerprint TEXT NOT NULL REFERENCES alerts(fingerprint),
+        at TEXT NOT NULL,
+        from_state TEXT,
+        to_state TEXT NOT NULL,
+        actor TEXT NOT NULL,
+        note TEXT NOT NULL DEFAULT '',
+        run_id TEXT
+    );
+    CREATE INDEX alert_events_by_alert ON alert_events(fingerprint, id);
+    """,
 ]
 
 

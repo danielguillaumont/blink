@@ -401,6 +401,30 @@ rules:
       A payment page script has no approval in the inventory. Approve it with a justification
       and owner (`blink approve`) or remove it.
 
+  # --- schedule (PCI DSS 11.6.1) -------------------------------------------------------
+  - id: schedule.missed-evaluation.over-a-week
+    detector: schedule
+    change_type: missed_evaluation
+    when: {over_a_week: true}
+    severity: critical
+    why: >-
+      The payment page has not been evaluated successfully for more than a week. PCI DSS
+      11.6.1 requires evaluation at least weekly; this period has no evidence of monitoring.
+  - id: schedule.missed-evaluation
+    detector: schedule
+    change_type: missed_evaluation
+    severity: high
+    why: >-
+      A scheduled evaluation did not happen or did not succeed, so unauthorized changes on the
+      payment page could go unnoticed. Check that the daemon is running and the target is up.
+  - id: schedule.capture-failed
+    detector: schedule
+    change_type: capture_failed
+    severity: high
+    why: >-
+      The scheduled scan could not load the payment page even after retries. Until it succeeds,
+      changes on the page are not being evaluated.
+
   # --- Blink itself -----------------------------------------------------------------
   - id: blink.detector-failed
     detector: blink

@@ -46,7 +46,7 @@ detects. It covers two scopes: the **monitored payment page** (the merchant's ch
 | B3 | Abuse the dashboard to change state | Binds to 127.0.0.1 by default; bearer token for every non-GET endpoint; CSRF protection; strict CSP on Blink's own pages (Phase 5) |
 | B4 | Steal secrets from evidence | Cookie values, `Authorization` headers and other secrets are never stored in snapshots, logs or reports; HAR is scrubbed before storage |
 | B5 | Malicious page content attacks the scanner | Headless Chromium sandbox, fresh browser context per capture, no stored state, capture timeouts and size limits, decompression-bomb guards on images |
-| B6 | Steal the ledger signing key | Key file written with 0600 permissions under `.blink/`, which is git-ignored; documented key rotation |
+| B6 | Steal the ledger signing key | Key file written with 0600 permissions under `.blink/`, which is git-ignored; the public key is pinned outside the host (`blink verify-ledger --public-key`); Blink refuses to re-key a non-empty ledger silently. Key rotation is not yet automated (see `docs/progress.md`) |
 
 ## 5. What Blink covers and what it does not
 

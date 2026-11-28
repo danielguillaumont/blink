@@ -11,6 +11,7 @@ import yaml
 from ..config import CONFIG_FILENAME, parse_config
 from ..errors import BlinkError
 from ..project import Project
+from ..store.ledger import generate_key, key_fingerprint
 
 HEADER = (
     "# Blink configuration. Reference: docs/configuration.md\n"
@@ -102,11 +103,17 @@ def run(args: argparse.Namespace) -> int:
         created.append(str(project.inventory_path))
     with project.open_store():
         created.append(str(project.store_dir))
+    key, public = generate_key(project.store_dir)
+    created.append(f"{key} (ledger signing key, keep private; never commit it)")
     if ensure_gitignore(project.root):
         created.append(f"{project.root / '.gitignore'} (added {GITIGNORE_ENTRY})")
     print("Created:")
     for item in created:
         print(f"  {item}")
+    pub = key.with_suffix(".pub")
+    print()
+    print(f"Ledger public key: {key_fingerprint(public)}")
+    print(f"  Record it outside this host (for example in your repository): {pub}")
     if not data["targets"]:
         print("Next: add a target to blink.yaml, then run `blink capture <target>`.")
     return 0

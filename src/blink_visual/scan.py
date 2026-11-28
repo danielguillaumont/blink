@@ -5,11 +5,12 @@ from __future__ import annotations
 import json
 from collections import Counter
 from collections.abc import Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from importlib.metadata import PackageNotFoundError, version
 from typing import Any
 
+from .alerts import AlertManager, Notification
 from .capture.browser import Capturer, new_snapshot_id
 from .capture.models import Snapshot
 from .config import TargetConfig
@@ -55,6 +56,8 @@ class ScanReport:
     results: tuple[TargetResult, ...]
     findings: tuple[Finding, ...]
     blink_version: str = field(default_factory=blink_version)
+    notifications: tuple[Notification, ...] = field(default=(), compare=False, repr=False)
+    """Alerts opened, reopened or escalated by this run (not part of the JSON report)."""
 
     @property
     def max_severity(self) -> Severity | None:
@@ -233,8 +236,37 @@ def scan(
         results=tuple(results),
         findings=tuple(findings),
     )
-    store.record_scan(report)
-    return report
+    return _record(store, report, kind="scan")
+
+
+def _record(store: Store, report: ScanReport, *, kind: str) -> ScanReport:
+    store.record_scan(report, kind=kind)
+    notifications = AlertManager(store).ingest(
+        report.run_id, report.findings, at=report.finished_at
+    )
+    return replace(report, notifications=tuple(notifications))
+
+
+def record_findings(
+    project: Project,
+    store: Store,
+    findings: Sequence[Finding],
+    *,
+    kind: str = "schedule",
+    now: datetime | None = None,
+) -> ScanReport:
+    """Grade and record findings Blink raises about itself (missed runs, failed captures)."""
+    moment = now or datetime.now(UTC)
+    graded = rule_engine(project).grade_all(findings)
+    report = ScanReport(
+        run_id=f"run-{new_snapshot_id(moment)}",
+        started_at=_iso(moment),
+        finished_at=_iso(moment),
+        fail_on=None,
+        results=(),
+        findings=tuple(sorted(graded, key=lambda f: (-f.severity, f.subject))),
+    )
+    return _record(store, report, kind=kind)
 
 
 def _iso(moment: datetime) -> str:
@@ -246,6 +278,7 @@ __all__ = [
     "TargetResult",
     "compare_snapshots",
     "establish_baseline",
+    "record_findings",
     "scan",
     "utc_now",
 ]
