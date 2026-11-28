@@ -1,6 +1,6 @@
-# CLAUDE.md: operating rules for building Blink 2.0
+# CLAUDE.md: operating rules for building Blink 2.x
 
-You are building Blink 2.0 autonomously from `BUILD_PLAN.md`. Read it fully before starting. It is the source of truth; if you need to deviate, write an ADR in `docs/adr/` explaining why, then continue.
+You are building Blink autonomously from `BUILD_PLAN.md` (v2.0, Phases 0–7) and `BUILD_PLAN_2X.md` (v2.x, Phases 13–21). Read them fully before starting. They are the source of truth; if you need to deviate, write an ADR in `docs/adr/` explaining why, then continue.
 
 ## Workflow
 - Work **one phase at a time, in order**. For each phase:
@@ -33,8 +33,15 @@ pip-audit
 - Errors are user-facing and actionable; exit codes follow `BUILD_PLAN.md` section 3.
 - Every new behaviour gets tests. Unit tests make no network calls; integration tests may reach only the localhost lab.
 
-## Safety rules (from BUILD_PLAN.md section 5, mandatory)
-- Lab and test fixtures must **never** be functional skimmers: no reading of form values, no serialization of payment fields, no sending of user input. Use only constant payloads to localhost.
+## Safety rules (BUILD_PLAN.md section 5, as amended by BUILD_PLAN_2X.md section 4; mandatory)
+- Lab and test fixtures must **never** be functional skimmers. No fixture serializes payment fields or sends user input, and payloads go only to localhost.
+- A fixture may **read** a payment field (to test `dataflow.field_read`) **only if** it discards the value immediately: no storage, no transmission, no derived data sent anywhere.
+- A fixture may **send** a canary-shaped string (to test the matcher) **only** as a constant, or as a value received from the test harness through a lab query parameter. It is **never** read from a form field.
+- **No single fixture both reads a field and transmits anything.** The `correlated_read_and_beacon` scenario uses two separate inert scripts: one reads and discards, the other beacons the constant `{"ping":1}`.
+- Canary PANs are Luhn-valid numbers from reserved test ranges, generated per run. Real card data never appears anywhere.
+- Journeys never submit a real order: a `submit` step requires `test_mode: true`, and tests only target the lab.
+- Cloaking work uses standard Playwright options only: no bot-protection bypass, no CAPTCHA solving, no fingerprint-spoofing plugins.
+- The Reporting API collector (`blink collect`) is the only component meant to be internet-facing. Everything else stays loopback by default.
 - Static-analysis fixtures are short, non-functional snippets containing the patterns being detected.
 - Use only published test card numbers, as static placeholder text. No real personal data anywhere.
 - Lab and dashboard bind to 127.0.0.1 by default. Never scan third-party websites in tests or CI.
