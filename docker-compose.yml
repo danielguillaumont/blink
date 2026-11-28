@@ -1,0 +1,70 @@
+# Blink demo: the lab shop, the scheduler daemon and the dashboard.
+#
+#   docker compose up -d --build --wait
+#   docker compose exec serve cat /data/.blink/blink.token     # dashboard login token
+#   open http://127.0.0.1:8765
+#   docker compose exec lab blink lab --scenario new_third_party_script
+#
+# The lab only binds to loopback (a safety rule), so the daemon and the dashboard share the lab
+# container's network namespace. The dashboard binds 0.0.0.0 inside it so Docker can publish
+# it; Blink therefore asks for the token on every page. The port is published on 127.0.0.1 only.
+name: blink-demo
+
+x-blink: &blink
+  build: .
+  image: blink:local
+  read_only: true
+  tmpfs:
+    - /tmp
+  volumes:
+    - blink-data:/data
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+  shm_size: 256m
+
+services:
+  lab:
+    <<: *blink
+    command: ["lab", "--port", "8780"]
+    environment:
+      BLINK_HEALTHCHECK_URL: http://127.0.0.1:8780/checkout
+    ports:
+      - "127.0.0.1:8765:8765"
+
+  setup:
+    <<: *blink
+    network_mode: service:lab
+    entrypoint: ["/usr/local/bin/blink-demo-setup"]
+    restart: "no"
+    healthcheck:
+      disable: true
+    depends_on:
+      lab:
+        condition: service_healthy
+
+  daemon:
+    <<: *blink
+    network_mode: service:lab
+    command: ["daemon", "--metrics-port", "9464"]
+    environment:
+      BLINK_HEALTHCHECK_URL: http://127.0.0.1:9464/metrics
+    restart: unless-stopped
+    depends_on:
+      setup:
+        condition: service_completed_successfully
+
+  serve:
+    <<: *blink
+    network_mode: service:lab
+    command: ["serve", "--host", "0.0.0.0", "--port", "8765"]
+    environment:
+      BLINK_HEALTHCHECK_URL: http://127.0.0.1:8765/healthz
+    restart: unless-stopped
+    depends_on:
+      setup:
+        condition: service_completed_successfully
+
+volumes:
+  blink-data:

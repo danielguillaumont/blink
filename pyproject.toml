@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "blink-visual"
-version = "2.0.0.dev0"
+version = "2.0.0"
 description = "Self-hosted payment page integrity monitor: detect checkout tampering (Magecart / e-skimming) and produce evidence for PCI DSS 6.4.3 and 11.6.1."
 readme = "README.md"
 requires-python = ">=3.11"

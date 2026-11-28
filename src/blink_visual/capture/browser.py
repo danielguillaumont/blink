@@ -13,15 +13,17 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import os
 import secrets
 import tempfile
 import threading
 import time
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from types import TracebackType
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 from urllib.parse import urlsplit
 
 from ..config import ProfileConfig, TargetConfig
@@ -43,7 +45,15 @@ from .normalize import dom_hash, normalize_dom
 from .tls import inspect_tls
 
 if TYPE_CHECKING:
-    from playwright.sync_api import Browser, FloatRect, Frame, Page, Playwright, Response
+    from playwright.sync_api import (
+        Browser,
+        FloatRect,
+        Frame,
+        Page,
+        Playwright,
+        ProxySettings,
+        Response,
+    )
 
     from ..store import Store
 
@@ -222,6 +232,41 @@ class _Deadline:
 
 _active = threading.local()
 
+PROXY_ENV = "BLINK_PROXY"
+
+
+def proxy_settings(environ: Mapping[str, str] | None = None) -> dict[str, str] | None:
+    """Chromium proxy from ``BLINK_PROXY`` (e.g. ``http://proxy.internal:3128``).
+
+    ``BLINK_PROXY_BYPASS`` is a comma-separated bypass list; ``BLINK_PROXY_USERNAME`` and
+    ``BLINK_PROXY_PASSWORD`` hold credentials (kept out of the URL so they are never logged).
+    """
+    env = os.environ if environ is None else environ
+    server = env.get(PROXY_ENV, "").strip()
+    if not server:
+        return None
+    parts = urlsplit(server if "://" in server else f"http://{server}")
+    if parts.scheme not in {"http", "https", "socks5"} or not parts.hostname:
+        raise CaptureError(
+            f"{PROXY_ENV} must look like http://host:port (got scheme {parts.scheme!r})",
+            hint="see docs/runbooks/troubleshooting-capture.md",
+        )
+    if parts.username or parts.password:
+        raise CaptureError(
+            f"put proxy credentials in BLINK_PROXY_USERNAME / BLINK_PROXY_PASSWORD, not in "
+            f"{PROXY_ENV}",
+        )
+    settings = {"server": f"{parts.scheme}://{parts.netloc}"}
+    for key, name in (
+        ("bypass", "BLINK_PROXY_BYPASS"),
+        ("username", "BLINK_PROXY_USERNAME"),
+        ("password", "BLINK_PROXY_PASSWORD"),
+    ):
+        value = env.get(name, "").strip()
+        if value:
+            settings[key] = value
+    return settings
+
 
 class Capturer:
     """Owns a Playwright Chromium instance; each capture uses a fresh browser context.
@@ -249,7 +294,9 @@ class Capturer:
         self._playwright = sync_playwright().start()
         try:
             self._browser = self._playwright.chromium.launch(
-                headless=self.headless, args=LAUNCH_ARGS
+                headless=self.headless,
+                args=LAUNCH_ARGS,
+                proxy=cast("ProxySettings | None", proxy_settings()),
             )
         except PlaywrightError as exc:
             self._playwright.stop()

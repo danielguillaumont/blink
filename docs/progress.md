@@ -100,3 +100,23 @@ Status of each phase in [`BUILD_PLAN.md`](../BUILD_PLAN.md). One branch and one 
 - **Known gaps:** without `--public-key` a report signature proves integrity but not origin;
   distribute the ledger public key separately. The PDF needs the `[capture]` extra and
   Chromium (`--no-pdf` otherwise); the PDF test is skipped on the Windows CI leg.
+
+## Phase 7: Packaging and release (v2.0.0)
+
+- **Date:** 2026-11-27
+- **PR:** #12
+- **Delivered:** `Dockerfile` on the official Playwright Python image (non-root `pwuser`,
+  read-only root filesystem, `/data` volume, loopback `HEALTHCHECK`); `docker-compose.yml`
+  running the lab, `blink daemon` and `blink serve` in one network namespace (ADR 0004) with a
+  scripted demo smoke job in CI (`scripts/demo_smoke.sh`: compose up, tamper, alert, ack via
+  API, signed report with PDF); the composite action `action.yml` (baseline if missing,
+  optional store cache, scan gate, evidence artifact, step summary) with a sample workflow
+  that must pass on the clean lab and fail on a tampered one; a release workflow (sdist and
+  wheel, CycloneDX SBOM, pip-audit report, GitHub release, GHCR image with provenance) and
+  CodeQL. Runbooks: alert fired (incident response), rebaselining, troubleshooting capture.
+  README rewritten (problem, 60-second demo, Mermaid architecture, honest limitations).
+  `blink baseline --if-missing`; `BLINK_PROXY*` environment settings for Chromium. Version
+  2.0.0, tags `v2.0.0` and `v2`.
+- **Known gaps:** not published to PyPI (install from the GitHub release or tag). The
+  compose demo's dashboard requires a login because it binds 0.0.0.0 inside the container.
+  Proxy settings are global, not per target.

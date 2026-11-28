@@ -1,0 +1,35 @@
+# Sample config for .github/workflows/action-sample.yml: the localhost lab checkout.
+# Blink configuration. Reference: docs/configuration.md
+# Every target is captured once per profile. Masks hide volatile regions from the visual
+# detector; normalize rules remove volatile values (CSRF tokens, timestamps) from the DOM.
+version: 1
+store: .blink
+inventory: blink.inventory.yaml
+targets:
+- name: lab-checkout
+  url: http://127.0.0.1:8780/checkout
+  profiles:
+  - desktop-chrome
+  payment_region: '#payment'
+  wait_for: '#checkout-form'
+  masks:
+  - .timestamp
+  - .promo
+  timeout_s: 30
+  normalize:
+    volatile_attributes:
+    - selector: input[name="csrf_token"]
+      attributes:
+      - value
+    - selector: meta[name="csrf-token"]
+      attributes:
+      - content
+    - selector: body
+      attributes:
+      - data-render-id
+    - selector: img.lab-pixel
+      attributes:
+      - src
+    volatile_text:
+    - .timestamp
+    - .promo

@@ -1,0 +1,9 @@
+# Only pyproject.toml, README.md, LICENSE, src/ and docker/ are needed to build the image.
+*
+!pyproject.toml
+!README.md
+!LICENSE
+!src/
+!docker/
+**/__pycache__
+**/*.py[cod]

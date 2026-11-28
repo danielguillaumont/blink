@@ -139,3 +139,28 @@ The daemon logs JSON lines to stderr with structlog (`scan.started`, `scan.finis
 `scan.capture_failed`, `schedule.missed`, `alert.delivered`, `alert.delivery_failed`,
 `alert.dead_lettered`, ...). Keys that could hold secrets (`url`, `token`, `password`,
 `authorization`, `cookie`, `secret`) are redacted.
+
+## Running in Docker
+
+The image (`ghcr.io/danielguillaumont/blink:2`, built from the repository's `Dockerfile`) is
+based on the official Playwright Python image. It runs as the non-root `pwuser`, keeps all
+state in the `/data` volume (`BLINK_CONFIG=/data/blink.yaml`) and works with a read-only root
+filesystem:
+
+```bash
+docker run -d --name blink-daemon --read-only --tmpfs /tmp --shm-size 256m \
+  --cap-drop ALL --security-opt no-new-privileges -v blink-data:/data \
+  -e BLINK_HEALTHCHECK_URL=http://127.0.0.1:9464/metrics \
+  ghcr.io/danielguillaumont/blink:2 daemon --metrics-port 9464
+```
+
+Set `BLINK_HEALTHCHECK_URL` to a loopback URL inside the container (`/metrics` for the daemon,
+`/healthz` for `serve`) so the image's `HEALTHCHECK` probes the service itself.
+`docker-compose.yml` runs the demo (lab, daemon, dashboard); see the README and
+[ADR 0004](adr/0004-container-topology.md) for its network layout.
+
+## Outbound proxy
+
+Chromium does not read `HTTPS_PROXY`. Set `BLINK_PROXY=http://proxy.internal:3128`, and
+optionally `BLINK_PROXY_BYPASS`, `BLINK_PROXY_USERNAME` and `BLINK_PROXY_PASSWORD`. See
+[troubleshooting capture failures](runbooks/troubleshooting-capture.md).

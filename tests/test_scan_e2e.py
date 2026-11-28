@@ -145,6 +145,19 @@ def test_cli_baseline_then_scan(cli_project, clean_lab, capsys, tmp_path):
     assert "Gate: skipped" in capsys.readouterr().out
 
 
+def test_cli_baseline_if_missing_is_idempotent(cli_project, capsys):
+    assert main(["baseline", "--if-missing", "--profile", "desktop-chrome"]) == 0
+    first = capsys.readouterr().out
+    assert "Baseline lab-checkout [desktop-chrome] = snapshot" in first
+    assert main(["baseline", "--if-missing", "--profile", "desktop-chrome"]) == 0
+    second = capsys.readouterr().out
+    assert "exists; kept (--if-missing)" in second
+    assert "= snapshot" not in second
+    project = Project.load(cli_project)
+    with project.open_store() as store:
+        assert len(store.ledger.records({"baseline.set"})) == 1
+
+
 def test_cli_scan_capture_failure_exits_3(write_project, monkeypatch, capsys, capturer):
     import socket
 

@@ -13,3 +13,6 @@ tests/golden/** -text
 *.css text eol=lf
 *.html text eol=lf
 *.json text eol=lf
+*.sh text eol=lf
+Dockerfile text eol=lf
+docker/* text eol=lf
