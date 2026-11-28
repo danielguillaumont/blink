@@ -1,0 +1,193 @@
+{
+  "html_outline": [
+    "summary: Summary",
+    "scope: 1. Scope and targets",
+    "inventory: 2. Script inventory (6.4.3)",
+    "integrity: 3. Integrity method (6.4.3)",
+    "evaluations: 4. Evaluation log (11.6.1)",
+    "findings: 5. Findings and resolution",
+    "ledger: 6. Ledger verification and signature",
+    "methodology: 7. Methodology and limitations",
+    "disclaimer: 8. Disclaimer"
+  ],
+  "sections": [
+    "schema",
+    "generated_at",
+    "blink_version",
+    "period",
+    "scope",
+    "inventory",
+    "integrity",
+    "evaluations",
+    "findings",
+    "ledger",
+    "methodology",
+    "limitations",
+    "disclaimer",
+    "references"
+  ],
+  "shape": {
+    "blink_version": "str",
+    "disclaimer": "str",
+    "evaluations": {
+      "max_gap_hours": "float",
+      "note": "str",
+      "targets": [
+        {
+          "allowed_gap_hours": "float",
+          "evaluations": "int",
+          "failed": "int",
+          "first": "str",
+          "last": "str",
+          "max_gap_hours": "float",
+          "profile": "str",
+          "runs": [
+            {
+              "at": "str",
+              "error": "null",
+              "max_severity": "null",
+              "run_id": "str",
+              "status": "str"
+            }
+          ],
+          "target": "str",
+          "weekly": "bool",
+          "within_schedule": "bool"
+        }
+      ],
+      "weekly": "bool"
+    },
+    "findings": {
+      "items": [
+        {
+          "change_type": "str",
+          "detector": "str",
+          "events": [
+            {
+              "actor": "str",
+              "at": "str",
+              "from_state": "null",
+              "note": "str",
+              "to_state": "str"
+            }
+          ],
+          "fingerprint": "str",
+          "first_run_id": "str",
+          "first_seen": "str",
+          "id": "str",
+          "last_seen": "str",
+          "occurrences": "int",
+          "profile": "str",
+          "resolution": {
+            "at": "str",
+            "by": "str",
+            "note": "str",
+            "state": "str"
+          },
+          "rule_id": "str",
+          "severity": "str",
+          "state": "str",
+          "target": "str",
+          "title": "str"
+        }
+      ],
+      "summary": {
+        "high": "int"
+      },
+      "unresolved": "int"
+    },
+    "generated_at": "str",
+    "integrity": {
+      "dynamic": "int",
+      "method": [
+        "str"
+      ],
+      "pinned": "int",
+      "with_sri": "int"
+    },
+    "inventory": {
+      "entries": [
+        {
+          "approved": "bool",
+          "approved_at": "str",
+          "approved_by": "str",
+          "authorization": "str",
+          "id": "str",
+          "integrity": "str",
+          "justification": "str",
+          "ledger_seq": "int",
+          "owner": "str",
+          "pinned": "bool",
+          "source": "str",
+          "sri": "bool",
+          "type": "str"
+        }
+      ],
+      "path": "str",
+      "summary": {
+        "approved": "int",
+        "dynamic": "int",
+        "pinned": "int",
+        "total": "int",
+        "unapproved": "int",
+        "with_sri": "int"
+      },
+      "unlisted": []
+    },
+    "ledger": {
+      "head": {
+        "hash": "str",
+        "seq": "int",
+        "signature": "str",
+        "signed_at": "str"
+      },
+      "head_hash": "str",
+      "head_seq": "int",
+      "key_pinned": "bool",
+      "ok": "bool",
+      "problems": [],
+      "public_key": "str",
+      "public_key_fingerprint": "str",
+      "records": "int"
+    },
+    "limitations": [
+      "str"
+    ],
+    "methodology": [
+      "str"
+    ],
+    "period": {
+      "from": "str",
+      "to": "str"
+    },
+    "references": {
+      "pci_ssc_document_library": "str"
+    },
+    "schema": "str",
+    "scope": {
+      "config": "str",
+      "targets": [
+        {
+          "baselines": [
+            {
+              "profile": "str",
+              "reason": "str",
+              "set_at": "str",
+              "snapshot_id": "str"
+            }
+          ],
+          "max_gap_hours": "float",
+          "name": "str",
+          "profiles": [
+            "str"
+          ],
+          "schedule": {
+            "cron": "null",
+            "interval": "str"
+          },
+          "url": "str"
+        }
+      ]
+    }
+  }
+}
