@@ -7,7 +7,6 @@ from collections import Counter
 from collections.abc import Sequence
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
-from importlib.metadata import PackageNotFoundError, version
 from typing import Any
 
 from .alerts import AlertManager, Notification
@@ -30,10 +29,9 @@ STATUS_CAPTURE_FAILED = "capture_failed"
 
 
 def blink_version() -> str:
-    try:
-        return version("blink-visual")
-    except PackageNotFoundError:  # pragma: no cover - running from a source tree
-        return "unknown"
+    from ._meta import dist_version
+
+    return dist_version()
 
 
 @dataclass(frozen=True)

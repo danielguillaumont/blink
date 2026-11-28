@@ -1,7 +1,7 @@
 # Dashboard and API (`blink serve`)
 
 ```bash
-python -m pip install "blink-visual[server]"
+python -m pip install "blink-checkout[server]"
 blink serve                       # http://127.0.0.1:8765, API docs at /docs
 blink serve --port 9000
 ```

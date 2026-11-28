@@ -4,7 +4,7 @@ A tiny local shop with deterministic tamper scenarios, used by the tests, the de
 evaluation harness. It needs the `[server]` extra and binds to 127.0.0.1 only.
 
 ```bash
-python -m pip install "blink-visual[server,capture]"
+python -m pip install "blink-checkout[server,capture]"
 blink lab                                   # shop :8780, CDN :8781, sink :8782
 blink lab --scenario overlay_form_added     # switch a running lab (or start one)
 blink lab --list
