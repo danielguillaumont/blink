@@ -4,138 +4,234 @@
 
 # Blink
 
-**See what changed.** A local-first visual comparison toolkit for developers, designers and QA engineers. Compare two images, locate changes, measure structural similarity and export reproducible evidence — through a visual workspace, CLI or Python API.
+**See what changed on your payment page.** Blink is a self-hosted monitor for e-commerce
+checkout pages. It loads the page the way a customer's browser does, inventories and hashes
+every script, checks the security headers, the payment form and what the page looks like, and
+alerts you when something changes. It also produces the signed evidence your PCI DSS assessor
+asks for under requirements **6.4.3** (script management) and **11.6.1** (change and tamper
+detection).
 
-[![CI](https://github.com/danielguillaumont/blink/actions/workflows/ci.yml/badge.svg)](https://github.com/danielguillaumont/blink/actions/workflows/ci.yml) [![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB)](https://www.python.org/) [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![CI](https://github.com/danielguillaumont/blink/actions/workflows/ci.yml/badge.svg)](https://github.com/danielguillaumont/blink/actions/workflows/ci.yml) [![CodeQL](https://github.com/danielguillaumont/blink/actions/workflows/codeql.yml/badge.svg)](https://github.com/danielguillaumont/blink/actions/workflows/codeql.yml) [![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB)](https://www.python.org/) [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-![Blink workspace showing original and modified synthetic dashboards, metrics and comparison controls](assets/screenshots/workspace.png)
+## The problem
 
-## Blink 2.0 (in development)
+Web skimming (also called Magecart or formjacking) steals card numbers by slipping a few lines
+of JavaScript into a checkout page. The script might come from a compromised tag manager, a
+hijacked third-party library or a stolen CMS password. The page still works, and nothing looks
+wrong. Server-side scanners do not see it, because it often lives only in the browser or in a
+third-party file that changes after deploy.
 
-Blink is becoming a self-hosted **payment page integrity monitor** for PCI DSS 6.4.3 and 11.6.1
-(see [`BUILD_PLAN.md`](BUILD_PLAN.md) and [`docs/progress.md`](docs/progress.md)). Available so far:
+PCI DSS v4.0 made this explicit. Merchants must keep an authorized, justified inventory of the
+scripts on payment pages with an integrity check for each (6.4.3), and must detect
+unauthorized changes to those scripts and to security-relevant headers at least weekly
+(11.6.1). Blink does both, on infrastructure you control, and keeps a tamper-evident record of
+having done so.
 
-```bash
-python -m pip install -e ".[capture,server]" && python -m playwright install chromium
-blink lab &                      # local demo shop on 127.0.0.1:8780 (docs/lab.md)
-blink init --lab                 # blink.yaml for the lab checkout (docs/configuration.md)
-blink capture lab-checkout       # deterministic snapshot bundle under .blink/
-blink baseline lab-checkout      # record the known-good baseline
-blink lab --scenario overlay_form_added
-blink scan --fail-on high        # findings with severity and "why it matters"; exit 1 on high+
-blink inventory --sync           # PCI DSS 6.4.3 script inventory in blink.inventory.yaml
-blink approve SCRIPT_ID --justification "..." --owner web-team
-blink suggest-csp lab-checkout   # minimal CSP + SRI from the approved inventory
-blink daemon --metrics-port 9464 # scheduled scans, missed-run detection, alert sinks
-blink alerts ack ALERT_ID --by alice
-blink verify-ledger              # tamper-evident, ed25519-signed run history
-blink serve                      # dashboard + API on http://127.0.0.1:8765 (docs at /docs)
-blink report                     # signed audit evidence (HTML, PDF, report.json)
-```
+## 60-second demo
 
-Detectors, rules and the findings JSON schema are documented in [`docs/detectors.md`](docs/detectors.md);
-the inventory, approvals and static JS risk score in [`docs/inventory.md`](docs/inventory.md);
-the daemon, alerts, sinks, ledger and metrics in [`docs/operations.md`](docs/operations.md);
-the dashboard, API and its security model in [`docs/dashboard.md`](docs/dashboard.md);
-the audit evidence report in [`docs/report.md`](docs/report.md), and how it maps to
-PCI DSS 6.4.3 / 11.6.1 in [`docs/pci-mapping.md`](docs/pci-mapping.md).
-
-`blink compare` keeps its 1.0 behaviour, pinned by a byte-for-byte golden test.
-
-## What Blink does
-
-- Measure thresholded pixel differences with vectorized NumPy operations.
-- Calculate structural similarity (SSIM) and locate connected change regions.
-- Inspect differences through overlays, split, manual Blink, heatmap and side-by-side views.
-- Export native-resolution PNG evidence and versioned JSON reports.
-- Enforce visual regression limits in CI with predictable exit codes.
-
-![Original, modified, difference overlay and heatmap from Blink's scientific engine](assets/demo.gif)
-
-*Engine-rendered demonstration using a synthetic dashboard. No personal data.*
-
-## Quick start
-
-Python 3.11+ (3.12 recommended). From a terminal with Python available:
+Requires Docker. Everything runs on `127.0.0.1`: a deliberately tamperable lab shop, the
+scheduler and the dashboard.
 
 ```bash
-git clone https://github.com/danielguillaumont/blink.git
-cd blink
-python -m venv .venv
+git clone https://github.com/danielguillaumont/blink.git && cd blink
+docker compose up -d --build --wait               # lab shop, daemon (scans every minute), dashboard
+docker compose exec serve cat /data/.blink/blink.token   # copy the dashboard token
 ```
 
-Activate the environment: `.\.venv\Scripts\Activate.ps1` on Windows PowerShell or `source .venv/bin/activate` on macOS/Linux. Alternatively, invoke the virtual environment's Python executable directly.
+1. Open <http://127.0.0.1:8765>, paste the token and look at the clean **Targets** and
+   **Inventory**.
+2. Inject a third-party script into the lab checkout:
 
-### Visual workspace
+   ```bash
+   docker compose exec lab blink lab --scenario new_third_party_script
+   ```
+
+3. Within a minute the daemon scans and **Alerts** shows a high-severity alert: a new
+   cross-origin script without SRI, not in the inventory. Open it to see why it matters, the
+   script, its static-analysis risk score and the screenshots, then acknowledge it.
+4. `docker compose exec serve blink report --out /data/report` writes the signed audit
+   report (HTML, PDF and `report.json`).
+
+`docker compose down -v` removes everything. The same flow runs in CI on every change
+(`scripts/demo_smoke.sh`).
+
+## What it checks
+
+| Detector | Finds | Requirement |
+|---|---|---|
+| Scripts and inventory | New, removed or changed scripts (external, inline, in frames); scripts not in the approved inventory; pinned-hash mismatches; static-analysis risk score (0–100) for skimmer patterns | 6.4.3, 11.6.1 |
+| Headers and CSP | Removed or weakened `Content-Security-Policy` (`unsafe-inline`, wildcards), missing HSTS, framing and other security headers | 11.6.1 |
+| Network | New destinations the page sends requests or beacons to | 11.6.1 |
+| Payment form | Changed form `action`, new fields, hidden iframes, overlays | 11.6.1 |
+| Visual | Pixel and structural changes in the payment region (the Blink 1.0 engine) | supporting |
+| Schedule | Missed weekly evaluations and repeated capture failures | 11.6.1 |
+
+Findings carry a severity and a "why it matters", are deduplicated into alerts (open →
+acknowledged → resolved or accepted change) and can be sent to Slack, Teams, webhooks,
+e-mail, syslog/CEF or JSONL. Every run, approval and decision is appended to a hash-chained,
+ed25519-signed ledger.
+
+## Architecture
+
+```mermaid
+flowchart LR
+    subgraph Host["Your infrastructure (loopback by default)"]
+        D["blink daemon<br/>APScheduler: interval/cron,<br/>retries, missed-run checks"]
+        C["Capture engine<br/>headless Chromium (Playwright)<br/>scripts, headers, DOM, HAR, screenshot"]
+        DET["Detectors + rule engine<br/>scripts · inventory · headers/CSP<br/>network · forms · visual · schedule"]
+        S[("Evidence store<br/>SQLite + content-addressed blobs")]
+        L[("Ledger<br/>hash chain + ed25519 head")]
+        A["Alert manager<br/>dedupe · state machine"]
+        W["blink serve<br/>dashboard + JSON API"]
+        R["blink report<br/>HTML · PDF · signed JSON"]
+    end
+    P["Payment page<br/>(production or staging)"]
+    SINKS["Slack · Teams · webhook<br/>e-mail · syslog/CEF · JSONL"]
+    INV["blink.inventory.yaml<br/>(in git)"]
+    CI["GitHub Action<br/>blink scan --fail-on high"]
+
+    D --> C --> P
+    C --> S
+    S --> DET
+    INV --> DET
+    DET --> A --> SINKS
+    DET --> S
+    A --> L
+    S --> L
+    S --> W
+    L --> W
+    S --> R
+    L --> R
+    CI --> C
+```
+
+## Install
 
 ```bash
-python -m pip install ".[ui]"
-python -m streamlit run app.py
+python -m pip install "blink-visual[capture,server] @ git+https://github.com/danielguillaumont/blink@v2.0.0"
+python -m playwright install chromium                  # add --with-deps on Linux
+
+blink init --url https://staging.example.com/checkout  # blink.yaml, ledger key, dashboard token
+blink baseline                                         # record the known-good page
+blink inventory --sync                                 # draft blink.inventory.yaml from what was seen
+blink approve SCRIPT_ID --justification "Checkout UI" --owner web-team
+blink scan --fail-on high                              # exit 1 on high or critical findings
+blink daemon --metrics-port 9464                       # scheduled scans and alerts
+blink serve                                            # dashboard on http://127.0.0.1:8765
+blink report                                           # signed audit evidence
 ```
 
-Open the loopback URL printed by Streamlit. Explore the built-in demo or upload two equal-sized images. Adjust the threshold and region filter, inspect changes and export evidence. Run from the repository root so the bundled loopback-only and telemetry settings are applied.
+Or run the container image (`ghcr.io/danielguillaumont/blink:2`, non-root, read-only root
+filesystem, state in `/data`):
 
-![Difference overlay, evidence export controls and collapsible regions panel](assets/screenshots/evidence.png)
+```bash
+docker run --rm --read-only --tmpfs /tmp --shm-size 256m -v blink-data:/data \
+  ghcr.io/danielguillaumont/blink:2 scan --fail-on high
+```
 
-### Command line
+### In CI (GitHub Actions)
+
+```yaml
+- uses: danielguillaumont/blink@v2
+  with:
+    url: https://staging.example.com/checkout   # a site you own; or commit a blink.yaml
+    fail-on: high
+```
+
+The action installs Blink and Chromium, records a baseline if none is cached, scans, uploads
+`scan.json` and the signed report as an artifact, and fails the job on findings at or above
+`fail-on`. See [`action.yml`](action.yml) for all inputs and
+[`.github/workflows/action-sample.yml`](.github/workflows/action-sample.yml) for a working
+example.
+
+## Exit codes
+
+| Code | Meaning |
+|---|---|
+| `0` | Clean, or the gate passed |
+| `1` | Findings at or above `--fail-on` (or a failed ledger/report verification) |
+| `2` | Usage, configuration or I/O error |
+| `3` | Capture failed: target unreachable or timed out ([runbook](docs/runbooks/troubleshooting-capture.md)) |
+
+## Honest limitations
+
+- **One vantage point.** Blink sees what *its* browser receives. Skimmers that target only
+  certain countries, devices, returning customers or times of day can be missed. Run it from
+  where your customers are, and keep CSP and SRI as your preventive controls.
+- **Detection, not prevention.** Blink tells you within your scan interval. A strict CSP
+  (`blink suggest-csp` drafts one) and SRI block the attack in the first place.
+- **Dynamic scripts are a judgment call.** Vendor scripts that change daily cannot be pinned.
+  Blink reports their changes with a static-analysis score that a careful attacker can evade.
+- **The ledger is tamper-evident, not tamper-proof.** Someone with both the signing key and
+  write access to the store could rewrite history. Pin the public key elsewhere and keep the
+  exported reports.
+- **Evidence, not a verdict.** The report supports your assessor's judgment; it does not
+  replace it ([PCI mapping](docs/pci-mapping.md)).
+- Bot protection may challenge headless browsers. Allowlist Blink at the WAF rather than
+  evading it ([runbook](docs/runbooks/troubleshooting-capture.md)).
+
+## Documentation
+
+| Topic | Doc |
+|---|---|
+| Configuration (`blink.yaml`) | [docs/configuration.md](docs/configuration.md) |
+| Detectors, rules, findings JSON schema | [docs/detectors.md](docs/detectors.md) |
+| Script inventory, approvals, risk score, CSP suggestions | [docs/inventory.md](docs/inventory.md) |
+| Daemon, alerts, sinks, ledger, metrics | [docs/operations.md](docs/operations.md) |
+| Dashboard, API and its security model | [docs/dashboard.md](docs/dashboard.md) |
+| Audit evidence report | [docs/report.md](docs/report.md) |
+| PCI DSS 6.4.3 / 11.6.1 mapping | [docs/pci-mapping.md](docs/pci-mapping.md) |
+| The lab and its tamper scenarios | [docs/lab.md](docs/lab.md) |
+| Threat model | [docs/threat-model.md](docs/threat-model.md) |
+| Runbooks: [an alert fired](docs/runbooks/alert-fired.md) · [rebaselining](docs/runbooks/rebaselining.md) · [capture failures](docs/runbooks/troubleshooting-capture.md) | docs/runbooks/ |
+| Design decisions | [docs/adr/](docs/adr/) |
+
+## Safety
+
+Blink is a defensive tool. Its lab and test fixtures never read form values or send user
+input anywhere; they only make detectable changes. The lab and dashboard bind to
+`127.0.0.1` by default. Snapshots, logs and reports never store cookie values,
+`Authorization` headers or other secrets. Only scan sites you own or are authorized to test.
+
+## Blink 1.0: visual comparison (`blink compare`)
+
+Blink started as a local-first image comparison toolkit, and it still is one. The engine now
+also powers the visual detector, and `blink compare` keeps its 1.0 behaviour, pinned by a
+byte-for-byte golden test.
 
 ```bash
 python -m pip install .
-python examples/scientific_smoke.py
-blink compare outputs/bl02/before.png outputs/bl02/after.png --fail-above 2
-blink compare outputs/bl02/before.png outputs/bl02/after.png --output-dir evidence
-blink compare outputs/bl02/before.png outputs/bl02/after.png --json
+blink compare before.png after.png --fail-above 2          # exit 1 if more than 2% changed
+blink compare before.png after.png --output-dir evidence   # overlay.png, heatmap.png, report.json
+blink compare before.png after.png --json
+python -m pip install ".[ui]" && python -m streamlit run app.py   # the visual workspace
 ```
-
-The smoke fixture contains exactly 300 changed pixels out of 16,000 (1.875%). The first comparison passes the 2% quality gate; a 1% gate would fail. The output directory must not exist. Blink writes `overlay.png`, `heatmap.png` and `report.json` before evaluating the gate. If an I/O error leaves partial evidence, retry in a new directory.
-
-| Exit code | Meaning |
-| --- | --- |
-| `0` | Comparison succeeded; optional quality gate passed |
-| `1` | Comparison succeeded; changed percentage exceeded the limit |
-| `2` | Invalid arguments, unsupported input or evidence I/O error |
-
-The quality gate uses the unrounded percentage and fails only when strictly greater than the limit. With `--json`, reports go to stdout and errors or gate messages to stderr. Use `python -m blink_visual` if the `blink` executable is not on your PATH. Run `blink compare --help` for all options.
-
-### Python API
 
 ```python
 from blink_visual import analyze, difference_overlay, heatmap, load_rgb
 
 result = analyze("before.png", "after.png", threshold=15)
 print(result.pixels.changed_percentage, result.ssim)
-print(result.to_dict())
 difference_overlay(load_rgb("after.png"), result).save("overlay.png")
-heatmap(result).save("heatmap.png")
 ```
 
-The core package has no Streamlit dependency. A wheel from GitHub Releases can also be installed with `python -m pip install <wheel-file>` for CLI and library use; the visual workspace requires the source checkout and UI extra.
+A pixel counts as changed when its largest RGB-channel difference is greater than the
+threshold (0–255; CLI default 15). SSIM and connected change regions are reported alongside.
+Inputs are equal-sized PNG or JPEG images, processed locally, never resized. For `compare`,
+exit code `1` means the changed percentage exceeded `--fail-above`.
 
-## How it works
-
-| Component | Responsibility |
-| --- | --- |
-| NumPy | Widened integer subtraction, max-channel magnitude and boolean masks |
-| SciPy | Eight-connected component detection and region geometry |
-| scikit-image | Structural similarity across decoded RGB channels |
-| Pillow | Image decoding, orientation, overlays and PNG rendering |
-| Streamlit | Optional interactive local workspace |
-| argparse | CLI and automation integration |
-
-All three interfaces share the numerical engine. A pixel is changed when its maximum absolute RGB-channel difference is strictly greater than the threshold (0–255). CLI and workspace default to 15; the Python API defaults to 0. Region filtering changes the qualifying region count, not the changed-pixel percentage; the largest 100 qualifying regions are reported. SSIM uses a fixed data range of 255 and an odd window up to 7 pixels, and is unavailable if either dimension is below 3. SSIM and the fixed-scale heatmap are independent of the threshold.
-
-### Input and privacy boundaries
-
-Blink supports equal-sized, single-frame, opaque 8-bit RGB or grayscale PNG/JPEG images and honors EXIF orientation. It does not silently resize, align, composite transparency or convert color profiles. CLI and workspace inputs are capped at 20 MiB and 4 million pixels per image; those application limits do not apply to direct Python API calls. Images are processed locally; the core comparison engine makes no network requests. Workspace preview scaling never changes the analyzed or exported images.
+![Blink workspace showing original and modified synthetic dashboards, metrics and comparison controls](assets/screenshots/workspace.png)
 
 ## Development
 
 ```bash
-python -m pip install -e ".[dev,ui]"
-python -m pytest -q
-python examples/smoke.py
-python examples/scientific_smoke.py
-python examples/generate_demo.py
+python -m pip install -e ".[dev,ui,capture,server]"
+python -m playwright install chromium
+python scripts/fetch_js_corpus.py        # real-world JS corpus for the risk-score tests
+ruff check . && ruff format --check .
+mypy src/blink_visual --exclude 'src/blink_visual/(compare|analysis|render|workspace|cli)\.py'
+pytest -q --cov=src/blink_visual
+bandit -q -r src && pip-audit
 ```
 
-CI runs the tests and smoke comparisons on Windows and Linux with Python 3.12. The optional UI extra is required for Streamlit tests. See [development checkpoints](docs/roadmap.md) for scope and [MIT license](LICENSE) for usage terms.
+Progress per phase is in [docs/progress.md](docs/progress.md). Licensed under [MIT](LICENSE).
