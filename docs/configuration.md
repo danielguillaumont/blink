@@ -58,6 +58,13 @@ per-target `schedule:` override).
 
 Capturing with more than one profile helps expose skimmers that cloak by user agent.
 
+## Journeys
+
+When the payment page only renders after a cart and checkout steps, give the target a
+`journey:` of browser steps (`goto`, `click`, `fill`, `select`, `check`, `press`, `wait_for`,
+`wait_ms`, `assert_visible`, `assert_url`, `capture`) plus `test_data:` placeholders. See
+[journeys](journeys.md). A `submit` step needs `test_mode: true`.
+
 ## Proxies and protected targets
 
 Staging checkouts often sit behind basic auth or a bypass header, and some hosts can only reach

@@ -186,3 +186,40 @@ uploaded. Full detail is in [releasing.md](releasing.md).
   - `blink doctor` checks the key mode on POSIX only.
   - `mkdocs-material` prints an end-of-life notice (May 2027) that isn't a build warning.
     Moving to Zensical is a later decision.
+
+## Phase 14: Synthetic journeys
+
+- **Date:** 2026-11-28
+- **PR:** #15
+- **Delivered:**
+  - **Journeys:** `targets[].journey` supports the steps `goto`, `click`, `fill`, `select`,
+    `check`, `press`, `wait_for`, `wait_ms`, `assert_visible`, `assert_url`, `capture` and
+    `submit`. Each step accepts `timeout_s`, `frame` and `name`.
+  - **Test data:** `test_data:` with `{{canary.*}}` (per-capture, Luhn-valid PAN in the 411111
+    test range), `{{faker.*}}` (built in, no dependency), `{{env.*}}` (the only source of
+    secrets) and `{{test_data.*}}` placeholders, all validated when the config loads.
+  - **Capture states:** one snapshot per target and profile (ADR 0006). The last `capture` is
+    the compared state. Earlier states keep a screenshot and DOM hash, and their scripts join
+    the inventory. Filled fields are masked in screenshots automatically.
+  - **Order safety:**
+    - `submit` requires `test_mode: true`;
+    - order-like clicks and presses are rejected when the config loads, unless marked
+      `safe: true`;
+    - a runtime guard blocks card-form submission outside `test_mode`.
+  - **Failures and redirects:** a failed step becomes a `journey.step_failed` finding (high,
+    with a screenshot shown on the dashboard) and the run exits 3. A target without a journey
+    that gets redirected away from its payment page fails with an error that points to
+    `journey:`.
+  - **Lab:** a multi-step flow `/shop` → cart → guest details → `/shop/checkout`, with a
+    session cookie. `/shop/checkout` redirects to `/shop/cart?empty=1` without a cart, and
+    the v2.0 `/checkout` is unchanged. `lab_journey_target()` helper.
+  - **`blink record`:** wraps Playwright codegen and converts it to a draft journey. It drops
+    order clicks and replaces typed card numbers and e-mail addresses with placeholders.
+    `--from-file` converts an existing script.
+  - **Docs:** `docs/journeys.md`, plus recipes `docs/recipes/woocommerce.md` and `magento.md`
+    (templates, "adapt selectors"; a test checks they parse and never set `test_mode`).
+- **Known gaps:**
+  - Interactive `blink record` needs a desktop session, so only the converter is tested.
+  - A journey's earlier capture states are recorded as evidence but not diffed on their own
+    (ADR 0006).
+  - The recipes are templates checked against the config schema, not against live stores.
