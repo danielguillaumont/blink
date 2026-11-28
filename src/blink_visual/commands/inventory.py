@@ -224,9 +224,24 @@ def run_approve(args: argparse.Namespace) -> int:
         )
     for entry in pending:
         inventory.upsert(entry)
-        pin = "content hash not pinned" if not entry.pinned else "content hash pinned"
-        print(f"Approved {entry.id} ({pin}) by {entry.approved_by} at {entry.approved_at}")
     save_inventory(project.inventory_path, inventory)
+    with project.open_store() as store:
+        for entry in pending:
+            store.ledger.append(
+                "inventory.approved",
+                {
+                    "id": entry.id,
+                    "url": entry.url,
+                    "inline_sha384": entry.inline_sha384,
+                    "expected_hash": entry.expected_hash,
+                    "justification": entry.justification,
+                    "owner": entry.owner,
+                    "approved_by": entry.approved_by,
+                },
+                at=entry.approved_at or "",
+            )
+            pin = "content hash not pinned" if not entry.pinned else "content hash pinned"
+            print(f"Approved {entry.id} ({pin}) by {entry.approved_by} at {entry.approved_at}")
     return 0
 
 
