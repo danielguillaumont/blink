@@ -24,10 +24,10 @@ def config_parent() -> argparse.ArgumentParser:
 
 
 def register(subparsers: Any) -> None:
-    from . import capture, init, inventory, lab, ops, report, scan, serve
+    from . import capture, doctor, init, inventory, lab, ops, report, scan, serve
 
     common = config_parent()
-    for module in (init, capture, lab, scan, inventory, ops, serve, report):
+    for module in (init, capture, lab, scan, inventory, ops, serve, report, doctor):
         module.add_parser(subparsers, common)
 
 
