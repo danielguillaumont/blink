@@ -99,7 +99,8 @@ runs:
       shell: bash
       env:
         BLINK_CONFIG_PATH: ${{ inputs.config }}
-      run: blink baseline -c "$BLINK_CONFIG_PATH" --if-missing --reason "GitHub Action ${GITHUB_WORKFLOW} #${GITHUB_RUN_NUMBER}"
+      run: |
+        blink baseline -c "$BLINK_CONFIG_PATH" --if-missing           --reason "GitHub Action ${GITHUB_WORKFLOW} run ${GITHUB_RUN_NUMBER}"
 
     - name: Scan
       id: scan
