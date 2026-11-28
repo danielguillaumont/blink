@@ -223,6 +223,7 @@ def finding_detail(store: Store, run_id: str, fingerprint: str) -> dict[str, Any
         ("Current (payment region)", "current_blob"),
         ("Blink overlay", "overlay_blob"),
         ("Blink heatmap", "heatmap_blob"),
+        ("Where the journey broke", "screenshot_blob"),
     ):
         if evidence.get(key):
             images.append({"label": label, "blob": evidence[key]})

@@ -14,9 +14,17 @@ from .capture.browser import Capturer, new_snapshot_id
 from .capture.models import Snapshot
 from .config import TargetConfig
 from .detect import DetectionContext, run_detectors
-from .errors import EXIT_CAPTURE, EXIT_FINDINGS, EXIT_OK, EXIT_USAGE, CaptureError
+from .errors import (
+    EXIT_CAPTURE,
+    EXIT_FINDINGS,
+    EXIT_OK,
+    EXIT_USAGE,
+    CaptureError,
+    JourneyStepError,
+)
 from .findings import Finding, Severity
 from .inventory import Inventory, load_inventory
+from .journey import step_failed_finding
 from .project import Project
 from .rules import RuleEngine
 from .store import Store, utc_now
@@ -192,6 +200,15 @@ def scan(
             baseline_id = store.baseline_id(target.name, name)
             try:
                 current = capturer.capture(target, name, project.config.profile(name), store)
+            except JourneyStepError as exc:
+                failed = engine.grade(step_failed_finding(target.name, name, exc))
+                findings.append(failed)
+                results.append(
+                    TargetResult(
+                        target.name, name, STATUS_CAPTURE_FAILED, baseline_id, None, str(exc), 1
+                    )
+                )
+                continue
             except CaptureError as exc:
                 results.append(
                     TargetResult(

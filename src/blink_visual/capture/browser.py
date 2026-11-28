@@ -12,6 +12,7 @@ credential and cookie headers are scrubbed from the HAR and dropped from the hea
 from __future__ import annotations
 
 import base64
+import contextlib
 import hashlib
 import os
 import secrets
@@ -27,7 +28,9 @@ from typing import TYPE_CHECKING, Any, cast
 from urllib.parse import urlsplit
 
 from ..config import ProfileConfig, TargetConfig
-from ..errors import CaptureError, MissingExtraError
+from ..errors import CaptureError, JourneyStepError, MissingExtraError
+from ..journey.data import Resolver
+from ..journey.runner import SUBMIT_GUARD_JS, JourneyRunner, StepFailed
 from .access import install_header, resolve_access
 from .har import SENSITIVE_HEADERS, scrub_har_bytes
 from .models import (
@@ -37,6 +40,8 @@ from .models import (
     FormRecord,
     IframeRecord,
     Initiator,
+    JourneyRecord,
+    JourneyState,
     RegionCapture,
     RequestRecord,
     ScriptRecord,
@@ -181,6 +186,8 @@ class _Recorder:
     failed: set[str] = field(default_factory=set)
     script_responses: dict[str, tuple[Response, str]] = field(default_factory=dict)
     initiators: dict[str, Initiator] = field(default_factory=dict)
+    document: Response | None = None
+    """The latest main-frame document response (a journey navigates several times)."""
 
     def on_request(self, request: Any) -> None:
         try:
@@ -200,6 +207,9 @@ class _Recorder:
         self.failed.add(request.url)
 
     def on_response(self, response: Response) -> None:
+        with contextlib.suppress(Exception):  # a detached frame has no parent to ask about
+            if response.request.is_navigation_request() and response.frame.parent_frame is None:
+                self.document = response
         if response.request.resource_type == "script" and response.url not in self.script_responses:
             try:
                 frame_url = response.frame.url
@@ -345,6 +355,7 @@ class Capturer:
         warnings: list[str] = []
         recorder = _Recorder()
         access = resolve_access(target, profile_proxy=profile.proxy)
+        resolver = Resolver(test_data=target.test_data, target=target.name)
         with tempfile.TemporaryDirectory(prefix="blink-har-") as tmp:
             har_path = Path(tmp) / "network.har"
             context = self.browser.new_context(
@@ -364,6 +375,8 @@ class Capturer:
             )
             try:
                 install_header(context, access)
+                if target.journey and not target.test_mode:
+                    context.add_init_script(SUBMIT_GUARD_JS)
                 page = context.new_page()
                 page.set_default_timeout(deadline.remaining_ms())
                 cdp = context.new_cdp_session(page)
@@ -388,17 +401,12 @@ class Capturer:
                         f"target unreachable: {target.url} ({reason})",
                         hint="see docs/runbooks/troubleshooting-capture.md",
                     ) from None
-                snapshot = self._collect(
-                    page,
-                    response,
-                    target,
-                    profile_name,
-                    recorder,
-                    deadline,
-                    warnings,
-                    store,
-                    started,
-                )
+                args = (target, profile_name, recorder, deadline, warnings, store, started)
+                if target.journey:
+                    snapshot = self._journey(page, response, resolver, *args)
+                else:
+                    self._check_redirect(page, target, deadline)
+                    snapshot = self._collect(page, response, *args)
             except PlaywrightTimeout:
                 raise CaptureError(
                     f"timed out after {target.timeout_s:g}s capturing {target.url}"
@@ -409,7 +417,7 @@ class Capturer:
                 scrub_har_bytes(
                     har_path.read_bytes(),
                     names=access.secret_headers,
-                    values=access.secret_values,
+                    values=access.secret_values | resolver.secrets_used,
                 )
                 if har_path.exists()
                 else b"{}"
@@ -427,6 +435,152 @@ class Capturer:
 
         return replace(snapshot, blobs=blobs, tls=tls, duration_ms=duration)
 
+    @staticmethod
+    def _check_redirect(page: Page, target: TargetConfig, deadline: _Deadline) -> None:
+        """Fail clearly when a payment page bounced us elsewhere (empty cart, no session)."""
+        from playwright.sync_api import TimeoutError as PlaywrightTimeout
+
+        wanted, landed = urlsplit(target.url), urlsplit(page.url)
+        if (wanted.netloc, wanted.path.rstrip("/")) == (landed.netloc, landed.path.rstrip("/")):
+            return
+        selector = target.wait_for or target.payment_region
+        if not selector:
+            return
+        try:
+            page.wait_for_selector(
+                selector, state="attached", timeout=min(3000.0, deadline.remaining_ms())
+            )
+            return
+        except PlaywrightTimeout:
+            pass
+        raise CaptureError(
+            f"{target.url} redirected to {page.url} and {selector!r} never appeared: the "
+            "payment page probably needs a cart, a session or earlier checkout steps",
+            hint=(
+                f"add a `journey:` to target '{target.name}' that adds a product to the cart and "
+                "fills the guest details first (see docs/journeys.md)"
+            ),
+        )
+
+    def _journey(
+        self,
+        page: Page,
+        response: Response | None,
+        resolver: Resolver,
+        target: TargetConfig,
+        profile_name: str,
+        recorder: _Recorder,
+        deadline: _Deadline,
+        warnings: list[str],
+        store: Store,
+        started: datetime,
+    ) -> Snapshot:
+        """Run the journey; the last ``capture`` step (or the end) is the snapshot's state."""
+        from dataclasses import replace
+
+        states: list[JourneyState] = []
+        extra_frames: list[tuple[str, dict[str, Any]]] = []
+        primary: dict[str, Any] = {}
+        runner: JourneyRunner
+
+        def collect_primary() -> Snapshot:
+            return self._collect(
+                page,
+                recorder.document or response,
+                target,
+                profile_name,
+                recorder,
+                deadline,
+                warnings,
+                store,
+                started,
+                extra_frames=list(extra_frames),
+                extra_masks=list(runner.filled),
+            )
+
+        def on_capture(name: str, is_primary: bool) -> None:
+            if is_primary:
+                primary["name"], primary["snapshot"] = name, collect_primary()
+                return
+            frames = [
+                (frame.url, data)
+                for frame in page.frames
+                if (data := self._frame_data(frame, warnings)) is not None
+            ]
+            extra_frames.extend(frames)
+            png = page.screenshot(
+                full_page=False,
+                animations="disabled",
+                caret="hide",
+                mask=[page.locator(s) for s in runner.filled],
+                mask_color=MASK_COLOR,
+                timeout=deadline.remaining_ms(),
+            )
+            dom = normalize_dom(page.content(), target.normalize)
+            states.append(
+                JourneyState(
+                    name=name,
+                    url=page.url,
+                    screenshot=store.put_blob(png, "image/png"),
+                    dom_hash=dom_hash(dom),
+                    scripts=sum(len(data.get("scripts", [])) for _, data in frames),
+                )
+            )
+
+        runner = JourneyRunner(
+            page, target, resolver, remaining_ms=deadline.remaining_ms, on_capture=on_capture
+        )
+        try:
+            steps = runner.run()
+        except StepFailed as failed:
+            shot = None
+            try:
+                shot = store.put_blob(page.screenshot(full_page=False, timeout=5000), "image/png")
+            except Exception:  # the page may be gone; the finding still names the step
+                warnings.append("could not screenshot the failed journey step")
+            raise JourneyStepError(
+                f"journey step {failed.index} ({failed.step.describe()}) failed on {page.url}: "
+                f"{failed.reason}",
+                step=failed.index,
+                action=failed.step.action,
+                description=failed.step.describe(),
+                url=page.url,
+                screenshot=shot,
+                hint=(
+                    "the checkout flow or a selector changed: look at the screenshot, then fix "
+                    "the step in blink.yaml (see docs/journeys.md)"
+                ),
+            ) from None
+        snapshot = primary.get("snapshot") or collect_primary()
+        states.append(
+            JourneyState(
+                name=primary.get("name", "final"),
+                url=snapshot.final_url,
+                screenshot=snapshot.blobs.get("screenshot"),
+                dom_hash=snapshot.dom_hash,
+                scripts=len(snapshot.scripts),
+                primary=True,
+            )
+        )
+        blocked = 0
+        if not target.test_mode:
+            try:
+                blocked = int(page.evaluate("() => window.__blinkBlockedSubmits || 0"))
+            except Exception:
+                blocked = 0
+        notes = list(snapshot.warnings)
+        if blocked:
+            notes.append(
+                f"blocked {blocked} payment form submission(s): target is not in test_mode"
+            )
+        record = JourneyRecord(
+            steps=tuple(steps),
+            states=tuple(states),
+            test_mode=target.test_mode,
+            blocked_submissions=blocked,
+        )
+        return replace(snapshot, journey=record, warnings=tuple(notes))
+
     def _collect(
         self,
         page: Page,
@@ -438,6 +592,9 @@ class Capturer:
         warnings: list[str],
         store: Store,
         started: datetime,
+        *,
+        extra_frames: list[tuple[str, dict[str, Any]]] | None = None,
+        extra_masks: list[str] | None = None,
     ) -> Snapshot:
         from playwright.sync_api import Error as PlaywrightError
         from playwright.sync_api import TimeoutError as PlaywrightTimeout
@@ -462,11 +619,14 @@ class Capturer:
             if data is not None:
                 frames_data.append((frame.url, data))
 
+        mask_selectors = list(target.masks) + [
+            m for m in extra_masks or () if m not in target.masks
+        ]
         mask_boxes: list[Box] = []
-        if target.masks:
-            for group in page.evaluate(BOXES_JS, list(target.masks)):
+        if mask_selectors:
+            for group in page.evaluate(BOXES_JS, mask_selectors):
                 mask_boxes.extend(b for b in map(_box, group) if b is not None)
-        masks = [page.locator(selector) for selector in target.masks]
+        masks = [page.locator(selector) for selector in mask_selectors]
         shot_kwargs: dict[str, Any] = {
             "animations": "disabled",
             "caret": "hide",
@@ -503,7 +663,8 @@ class Capturer:
 
         normalized = normalize_dom(page.content(), target.normalize)
         blobs["dom"] = store.put_blob(normalized.encode("utf-8"), "text/html")
-        scripts = self._scripts(frames_data, recorder, store, warnings)
+        # Scripts seen at earlier ``capture`` states of a journey count too (inventory, 6.4.3).
+        scripts = self._scripts(frames_data + (extra_frames or []), recorder, store, warnings)
         forms, iframes = self._forms_and_iframes(frames_data)
         cookies = tuple(
             sorted(

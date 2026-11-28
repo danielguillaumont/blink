@@ -40,6 +40,29 @@ class CaptureError(BlinkError):
     exit_code = EXIT_CAPTURE
 
 
+class JourneyStepError(CaptureError):
+    """A journey step failed, so the payment page was not reached and was not evaluated."""
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        step: int,
+        action: str,
+        description: str,
+        url: str | None = None,
+        screenshot: str | None = None,
+        hint: str | None = None,
+    ) -> None:
+        super().__init__(message, hint=hint)
+        self.step = step
+        self.action = action
+        self.description = description
+        self.url = url
+        self.screenshot = screenshot
+        """Blob digest of a screenshot taken where the journey broke."""
+
+
 class MissingExtraError(BlinkError):
     """An optional dependency group is not installed."""
 
